@@ -142,6 +142,7 @@ charCounter.Parent              = inputFrame
 -- Stacking is pure pixel math — perfectly consistent at every zoom level.
 
 local PIXELS_ABOVE_HEAD = 20   -- gap between head top and the bottom of the stack
+local REFERENCE_DIST    = 20   -- studs at which UIScale = 1.0 (bubbles look "normal")
 local Camera            = workspace.CurrentCamera
 
 -- ScreenGui that holds all bubble stacks
@@ -183,9 +184,15 @@ local function getOrCreateContainer(character: Model)
         layout.Padding              = UDim.new(0, 4)
         layout.Parent               = stackFrame
 
+        -- UIScale drives proportional shrink/grow with camera distance
+        local uiScale = Instance.new("UIScale")
+        uiScale.Scale  = 1
+        uiScale.Parent = stackFrame
+
         local head = character:FindFirstChild("Head")
         local container = {
                 stackFrame = stackFrame,
+                uiScale    = uiScale,
                 character  = character,
                 headRef    = head,
                 count      = 0,
@@ -212,12 +219,17 @@ RunService.RenderStepped:Connect(function()
                 local topOfHead = head.Position + Vector3.new(0, 0.6, 0)
                 local screenPos, onScreen = Camera:WorldToScreenPoint(topOfHead)
 
+                -- Scale proportionally to camera distance so bubble shrinks with character
+                local dist  = (Camera.CFrame.Position - head.Position).Magnitude
+                local scale = math.clamp(REFERENCE_DIST / dist, 0.3, 1.2)
+                container.uiScale.Scale = scale
+
                 if onScreen and screenPos.Z > 0 then
                         container.stackFrame.Visible = true
                         -- AnchorPoint is (0.5, 1) so Position.X/Y is the bottom-centre
                         container.stackFrame.Position = UDim2.new(
                                 0, screenPos.X,
-                                0, screenPos.Y - PIXELS_ABOVE_HEAD
+                                0, screenPos.Y - PIXELS_ABOVE_HEAD * scale
                         )
                 else
                         container.stackFrame.Visible = false
