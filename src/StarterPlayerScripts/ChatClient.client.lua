@@ -45,7 +45,7 @@ local CFG = {
         BUBBLE_BG_TRANS     = 0.08,
         BUBBLE_TEXT_COLOR   = Color3.fromRGB(30, 30, 30),    -- near-black
         BUBBLE_FONT         = Enum.Font.GothamSemibold,
-        BUBBLE_TEXT_SIZE    = 18,
+        BUBBLE_TEXT_SIZE    = 19,
         BUBBLE_MAX_WIDTH    = 240,   -- px — wraps beyond this
         BUBBLE_PADDING_H    = 20,    -- horizontal inner padding
         BUBBLE_PADDING_V    = 10,    -- vertical inner padding
@@ -134,7 +134,7 @@ charCounter.Parent              = inputFrame
 -- Stores {billboard, listFrame, count} per character name
 local characterContainers = {}
 
-local BILLBOARD_MAX_HEIGHT = 320  -- px — enough for ~5 stacked messages
+local BILLBOARD_MAX_HEIGHT = 130  -- px — tight above head; UIListLayout stacks upward
 local BUBBLE_GAP           = 4    -- px gap between stacked bubbles
 
 local function getOrCreateContainer(character: Model, attachPart: BasePart)
@@ -243,16 +243,13 @@ local function createBubble(character: Model, text: string)
                 TweenService:Create(target, info, props):Play()
         end
 
-        -- ── Lifecycle: slide-up fade-in → hold → fade-out → destroy ──────────────
+        -- ── Lifecycle: fade-in → hold → fade-out → destroy ───────────────────────
+        -- NOTE: bubble.Position must NOT be set manually — UIListLayout owns it.
+        -- The entrance effect is a smooth opacity fade only.
         task.spawn(function()
-                -- Slide up: briefly offset the bubble frame downward, then tween back up
-                bubble.Position = UDim2.new(0.5, -bubbleW / 2, 0, CFG.SLIDE_DISTANCE * 20)
                 local inInfo = TweenInfo.new(CFG.FADE_IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                tween(bubble, inInfo, {
-                        BackgroundTransparency = CFG.BUBBLE_BG_TRANS,
-                        Position = UDim2.new(0.5, -bubbleW / 2, 0, 0),
-                })
-                tween(label, inInfo, { TextTransparency = 0 })
+                tween(bubble, inInfo, { BackgroundTransparency = CFG.BUBBLE_BG_TRANS })
+                tween(label,  inInfo, { TextTransparency = 0 })
                 task.wait(CFG.FADE_IN_TIME)
 
                 -- Hold
