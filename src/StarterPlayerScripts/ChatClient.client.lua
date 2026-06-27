@@ -94,7 +94,7 @@ inputCorner.CornerRadius = UDim.new(0, 6)
 inputCorner.Parent = inputFrame
 
 local inputStroke = Instance.new("UIStroke")
-inputStroke.Color        = Color3.fromRGB(255, 255, 255)
+inputStroke.Color        = Color3.fromRGB(160, 160, 160)
 inputStroke.Thickness    = 1.5
 inputStroke.Transparency = 0.3
 inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -142,7 +142,7 @@ charCounter.Parent              = inputFrame
 -- STACK_STRIDE  — extra studs per additional bubble stacked on top.
 
 local BASE_STUDS_Y  = 3.2   -- first bubble sits this many studs above head
-local STACK_STRIDE  = 1.4   -- each extra stacked bubble rises this many studs more
+local STACK_STRIDE  = 0.65  -- each extra stacked bubble rises this many studs more
 
 -- Active bubble count per character (drives the stud offset for new bubbles)
 local characterStacks = {}  -- [characterName] = number
