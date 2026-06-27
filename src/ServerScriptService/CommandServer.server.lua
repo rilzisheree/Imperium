@@ -20,8 +20,14 @@
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local CommandRemotes  = require(ReplicatedStorage:WaitForChild("CommandRemotes"))
-local CommandRegistry = require(ReplicatedStorage:WaitForChild("CommandRegistry"))
+-- FIX (TypeError 1012): Cast WaitForChild to ModuleScript so Luau's type-checker
+-- can resolve each require and know the module's exported type.
+local CommandRemotes  = require(ReplicatedStorage:WaitForChild("CommandRemotes")  :: ModuleScript)
+local CommandRegistry = require(ReplicatedStorage:WaitForChild("CommandRegistry") :: ModuleScript)
+-- FIX (TypeError 1012 line 255): Moved ChatRemotes to the top-level require instead
+-- of being lazily required inside the announce handler, which also silences the
+-- unknown-require error and avoids re-requiring every time announce is called.
+local ChatRemotes     = require(ReplicatedStorage:WaitForChild("ChatRemotes")     :: ModuleScript)
 
 -- ─── Staff configuration ───────────────────────────────────────────────────────
 --
@@ -59,20 +65,31 @@ local function getTier(player: Player): string?
 
 	-- Check group ranks
 	if STAFF_CONFIG.GROUP_ID > 0 then
-		local ok, rank = pcall(function()
-			return player:GetRankInGroup(STAFF_CONFIG.GROUP_ID)
+		-- FIX (DeprecatedApi): GetRankInGroup is deprecated; use GroupService:GetGroupsAsync
+		-- to retrieve the player's rank without relying on the deprecated Player method.
+		local GroupService = game:GetService("GroupService")
+		local success, groups = pcall(function()
+			return GroupService:GetGroupsAsync(player.UserId)
 		end)
-		if ok and rank then
-			-- Walk from highest to lowest rank to find the player's tier
-			local bestTier = nil
-			local bestRank = 0
-			for minRank, tier in STAFF_CONFIG.GROUP_RANKS do
-				if rank >= minRank and minRank > bestRank then
-					bestRank = minRank
-					bestTier = tier
+		if success and groups then
+			local rank = 0
+			for _, groupInfo in groups do
+				if groupInfo.Id == STAFF_CONFIG.GROUP_ID then
+					rank = groupInfo.Rank
+					break
 				end
 			end
-			if bestTier then return bestTier end
+			if rank > 0 then
+				local bestTier = nil
+				local bestRank = 0
+				for minRank, tier in STAFF_CONFIG.GROUP_RANKS do
+					if rank >= minRank and minRank > bestRank then
+						bestRank = minRank
+						bestTier = tier
+					end
+				end
+				if bestTier then return bestTier end
+			end
 		end
 	end
 
@@ -132,15 +149,20 @@ _G.CmdFrozen  = frozenPlayers
 -- Each handler receives:
 --   executor  (Player)          — the staff member who ran the command
 --   args      (table of strings) — ordered arguments from the command bar
+--
+-- FIX (ImplicitReturn): All early exits now use the pattern `fail(...) return`
+-- instead of `return fail(...)`.  The latter leaves an implicit nil-return path
+-- visible to the type-checker; the former adds an explicit bare `return` so
+-- every branch is clearly accounted for.
 
 local HANDLERS: { [string]: (executor: Player, args: { string }) -> () } = {}
 
 -- kick <player> [reason]
 HANDLERS["kick"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: kick <player> [reason]") end
+	if not args[1] then fail(executor, "Usage: kick <player> [reason]") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
-	if target == executor then return fail(executor, "You cannot kick yourself.") end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
+	if target == executor then fail(executor, "You cannot kick yourself.") return end
 
 	local reason = args[2] or "Removed by staff."
 	target:Kick("You were kicked: " .. reason)
@@ -149,10 +171,10 @@ end
 
 -- ban <player> [reason]
 HANDLERS["ban"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: ban <player> [reason]") end
+	if not args[1] then fail(executor, "Usage: ban <player> [reason]") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
-	if target == executor then return fail(executor, "You cannot ban yourself.") end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
+	if target == executor then fail(executor, "You cannot ban yourself.") return end
 
 	local reason = args[2] or "Banned by staff."
 	-- TODO: persist ban to DataStore here
@@ -163,16 +185,16 @@ end
 
 -- unban <username>
 HANDLERS["unban"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: unban <username>") end
+	if not args[1] then fail(executor, "Usage: unban <username>") return end
 	-- TODO: remove from ban DataStore
 	ok(executor, '"' .. args[1] .. '" unbanned. (Implement DataStore persistence.)')
 end
 
 -- mute <player> [duration]
 HANDLERS["mute"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: mute <player> [duration]") end
+	if not args[1] then fail(executor, "Usage: mute <player> [duration]") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	mutedPlayers[target.UserId] = true
 	ok(executor, target.DisplayName .. " has been muted.")
@@ -187,9 +209,9 @@ end
 
 -- unmute <player>
 HANDLERS["unmute"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: unmute <player>") end
+	if not args[1] then fail(executor, "Usage: unmute <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	mutedPlayers[target.UserId] = nil
 	ok(executor, target.DisplayName .. " has been unmuted.")
@@ -198,10 +220,11 @@ end
 -- warn <player> <reason>
 HANDLERS["warn"] = function(executor, args)
 	if not args[1] or not args[2] then
-		return fail(executor, "Usage: warn <player> <reason>")
+		fail(executor, "Usage: warn <player> <reason>")
+		return
 	end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local reason = args[2]
 	-- Notify the warned player via system message
@@ -214,20 +237,21 @@ end
 -- tp <from> <to>
 HANDLERS["tp"] = function(executor, args)
 	if not args[1] or not args[2] then
-		return fail(executor, "Usage: tp <from> <to>")
+		fail(executor, "Usage: tp <from> <to>")
+		return
 	end
 	local from = resolvePlayer(executor, args[1])
 	local to   = resolvePlayer(executor, args[2])
-	if not from then return fail(executor, 'No player found: "' .. args[1] .. '"') end
-	if not to   then return fail(executor, 'No player found: "' .. args[2] .. '"') end
+	if not from then fail(executor, 'No player found: "' .. args[1] .. '"') return end
+	if not to   then fail(executor, 'No player found: "' .. args[2] .. '"') return end
 
 	local toChar = to.Character
 	local hrp    = toChar and toChar:FindFirstChild("HumanoidRootPart")
-	if not hrp then return fail(executor, to.DisplayName .. " has no character loaded.") end
+	if not hrp then fail(executor, to.DisplayName .. " has no character loaded.") return end
 
 	local fromChar = from.Character
 	local fromHrp  = fromChar and fromChar:FindFirstChild("HumanoidRootPart")
-	if not fromHrp then return fail(executor, from.DisplayName .. " has no character loaded.") end
+	if not fromHrp then fail(executor, from.DisplayName .. " has no character loaded.") return end
 
 	fromHrp.CFrame = hrp.CFrame + Vector3.new(0, 3, 0)
 	ok(executor, from.DisplayName .. " → " .. to.DisplayName)
@@ -236,23 +260,22 @@ HANDLERS["teleport"] = HANDLERS["tp"]
 
 -- tpme <player>
 HANDLERS["tpme"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: tpme <player>") end
+	if not args[1] then fail(executor, "Usage: tpme <player>") return end
 	HANDLERS["tp"](executor, { "me", args[1] })
 end
 
 -- bring <player>
 HANDLERS["bring"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: bring <player>") end
+	if not args[1] then fail(executor, "Usage: bring <player>") return end
 	HANDLERS["tp"](executor, { args[1], "me" })
 end
 
 -- announce <message>
+-- FIX: ChatRemotes is now a top-level require; no lazy require needed here.
 HANDLERS["announce"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: announce <message>") end
+	if not args[1] then fail(executor, "Usage: announce <message>") return end
 	local message = table.concat(args, " ")
 
-	-- Broadcast via the existing ChatRemotes system as a system message
-	local ChatRemotes = require(ReplicatedStorage:WaitForChild("ChatRemotes"))
 	for _, player in Players:GetPlayers() do
 		ChatRemotes.SystemMessage:FireClient(player, {
 			message = "📢 " .. message,
@@ -269,18 +292,19 @@ HANDLERS["ann"] = HANDLERS["announce"]
 -- speed <player> <value>
 HANDLERS["speed"] = function(executor, args)
 	if not args[1] or not args[2] then
-		return fail(executor, "Usage: speed <player> <value>")
+		fail(executor, "Usage: speed <player> <value>")
+		return
 	end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local value = tonumber(args[2])
-	if not value then return fail(executor, "Speed must be a number.") end
+	if not value then fail(executor, "Speed must be a number.") return end
 	value = math.clamp(value, 0, 500)
 
 	local char = target.Character
 	local hum  = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then return fail(executor, target.DisplayName .. " has no character loaded.") end
+	if not hum then fail(executor, target.DisplayName .. " has no character loaded.") return end
 
 	hum.WalkSpeed = value
 	ok(executor, target.DisplayName .. "'s walk speed set to " .. value .. ".")
@@ -288,13 +312,13 @@ end
 
 -- heal <player>
 HANDLERS["heal"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: heal <player>") end
+	if not args[1] then fail(executor, "Usage: heal <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local char = target.Character
 	local hum  = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then return fail(executor, target.DisplayName .. " has no character loaded.") end
+	if not hum then fail(executor, target.DisplayName .. " has no character loaded.") return end
 
 	hum.Health = hum.MaxHealth
 	ok(executor, target.DisplayName .. " healed to full health.")
@@ -302,9 +326,9 @@ end
 
 -- respawn <player>
 HANDLERS["respawn"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: respawn <player>") end
+	if not args[1] then fail(executor, "Usage: respawn <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	target:LoadCharacter()
 	ok(executor, target.DisplayName .. " has been respawned.")
@@ -312,13 +336,13 @@ end
 
 -- god <player>
 HANDLERS["god"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: god <player>") end
+	if not args[1] then fail(executor, "Usage: god <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local char = target.Character
 	local hum  = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then return fail(executor, target.DisplayName .. " has no character loaded.") end
+	if not hum then fail(executor, target.DisplayName .. " has no character loaded.") return end
 
 	if hum.MaxHealth == math.huge then
 		hum.MaxHealth = 100
@@ -333,13 +357,13 @@ end
 
 -- freeze <player>
 HANDLERS["freeze"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: freeze <player>") end
+	if not args[1] then fail(executor, "Usage: freeze <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local char = target.Character
 	local hum  = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then return fail(executor, target.DisplayName .. " has no character loaded.") end
+	if not hum then fail(executor, target.DisplayName .. " has no character loaded.") return end
 
 	frozenPlayers[target.UserId] = true
 	hum.WalkSpeed  = 0
@@ -349,13 +373,13 @@ end
 
 -- unfreeze <player>
 HANDLERS["unfreeze"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: unfreeze <player>") end
+	if not args[1] then fail(executor, "Usage: unfreeze <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 
 	local char = target.Character
 	local hum  = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then return fail(executor, target.DisplayName .. " has no character loaded.") end
+	if not hum then fail(executor, target.DisplayName .. " has no character loaded.") return end
 
 	frozenPlayers[target.UserId] = nil
 	hum.WalkSpeed  = 16
@@ -365,20 +389,20 @@ end
 
 -- shutdown [delay]
 HANDLERS["shutdown"] = function(executor, args)
-	local delay = tonumber(args[1]) or 5
+	local delayTime = tonumber(args[1]) or 5
 
 	for _, player in Players:GetPlayers() do
 		CommandRemotes.CommandFeedback:FireClient(player, false,
-			"Server shutting down in " .. delay .. " seconds…")
+			"Server shutting down in " .. delayTime .. " seconds…")
 	end
 
-	task.delay(delay, function()
+	task.delay(delayTime, function()
 		for _, player in Players:GetPlayers() do
 			player:Kick("Server shutdown.")
 		end
 	end)
 
-	ok(executor, "Shutdown initiated — " .. delay .. "s delay.")
+	ok(executor, "Shutdown initiated — " .. delayTime .. "s delay.")
 	warn("[CommandServer] SHUTDOWN triggered by " .. executor.Name)
 end
 
@@ -399,9 +423,9 @@ end
 
 -- spectate <player>  (client-side only — server acknowledges)
 HANDLERS["spectate"] = function(executor, args)
-	if not args[1] then return fail(executor, "Usage: spectate <player>") end
+	if not args[1] then fail(executor, "Usage: spectate <player>") return end
 	local target = resolvePlayer(executor, args[1])
-	if not target then return fail(executor, 'No player found: "' .. args[1] .. '"') end
+	if not target then fail(executor, 'No player found: "' .. args[1] .. '"') return end
 	-- The actual camera switch is client-side; here we just confirm validity
 	ok(executor, "Spectating " .. target.DisplayName .. ". (Implement camera switch client-side.)")
 end
@@ -413,7 +437,9 @@ CommandRemotes.CommandExecuted.OnServerEvent:Connect(function(executor: Player, 
 	if typeof(cmdName) ~= "string" then return end
 	if typeof(args) ~= "table" then args = {} end
 
-	cmdName = cmdName:lower():match("^%s*(.-)%s*$")
+	-- FIX (TypeError 1000): string:match() returns string?, not string.
+	-- Adding `or ""` guarantees cmdName stays a string after the trim.
+	cmdName = cmdName:lower():match("^%s*(.-)%s*$") or ""
 	if cmdName == "" then return end
 
 	-- Sanitize args
@@ -452,4 +478,8 @@ CommandRemotes.CommandExecuted.OnServerEvent:Connect(function(executor: Player, 
 	end
 end)
 
-print("[CommandServer] Staff command system active. " .. #HANDLERS .. " commands registered.")
+-- FIX (TableOperations): HANDLERS uses string keys, so `#HANDLERS` is always 0.
+-- Count entries manually with a loop instead.
+local handlerCount = 0
+for _ in HANDLERS do handlerCount += 1 end
+print("[CommandServer] Staff command system active. " .. handlerCount .. " commands registered.")

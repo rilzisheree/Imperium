@@ -1,0 +1,506 @@
+[{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "1012",
+		"target": {
+			"$mid": 1,
+			"path": "/types",
+			"scheme": "https",
+			"authority": "luau.org"
+		}
+	},
+	"severity": 8,
+	"message": "TypeError: Unknown require: game/ReplicatedStorage/CommandRemotes",
+	"source": "Luau",
+	"startLineNumber": 23,
+	"startColumn": 25,
+	"endLineNumber": 23,
+	"endColumn": 82,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "1012",
+		"target": {
+			"$mid": 1,
+			"path": "/types",
+			"scheme": "https",
+			"authority": "luau.org"
+		}
+	},
+	"severity": 8,
+	"message": "TypeError: Unknown require: game/ReplicatedStorage/CommandRegistry",
+	"source": "Luau",
+	"startLineNumber": 24,
+	"startColumn": 25,
+	"endLineNumber": 24,
+	"endColumn": 83,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "1012",
+		"target": {
+			"$mid": 1,
+			"path": "/types",
+			"scheme": "https",
+			"authority": "luau.org"
+		}
+	},
+	"severity": 8,
+	"message": "TypeError: Unknown require: game/ReplicatedStorage/ChatRemotes",
+	"source": "Luau",
+	"startLineNumber": 255,
+	"startColumn": 22,
+	"endLineNumber": 255,
+	"endColumn": 76,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "1000",
+		"target": {
+			"$mid": 1,
+			"path": "/types",
+			"scheme": "https",
+			"authority": "luau.org"
+		}
+	},
+	"severity": 8,
+	"message": "TypeError: Expected this to be 'string', but got 'string?'",
+	"source": "Luau",
+	"startLineNumber": 416,
+	"startColumn": 12,
+	"endLineNumber": 416,
+	"endColumn": 49,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "22",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "deprecatedapi-22"
+		}
+	},
+	"severity": 4,
+	"message": "DeprecatedApi: Member 'GetRankInGroup' is deprecated",
+	"source": "Luau",
+	"startLineNumber": 63,
+	"startColumn": 11,
+	"endLineNumber": 63,
+	"endColumn": 32,
+	"modelVersionId": 2,
+	"tags": [
+		2
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 140; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 147,
+	"startColumn": 2,
+	"endLineNumber": 147,
+	"endColumn": 76,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 152; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 161,
+	"startColumn": 2,
+	"endLineNumber": 161,
+	"endColumn": 96,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 166; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 168,
+	"startColumn": 2,
+	"endLineNumber": 168,
+	"endColumn": 82,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 173; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 182,
+	"startColumn": 3,
+	"endLineNumber": 184,
+	"endColumn": 7,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 190; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 195,
+	"startColumn": 2,
+	"endLineNumber": 195,
+	"endColumn": 58,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 201; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 211,
+	"startColumn": 2,
+	"endLineNumber": 211,
+	"endColumn": 97,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 217; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 233,
+	"startColumn": 2,
+	"endLineNumber": 233,
+	"endColumn": 59,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 239; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 240,
+	"startColumn": 2,
+	"endLineNumber": 240,
+	"endColumn": 45,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 245; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 246,
+	"startColumn": 2,
+	"endLineNumber": 246,
+	"endColumn": 45,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 251; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 265,
+	"startColumn": 2,
+	"endLineNumber": 265,
+	"endColumn": 36,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 272; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 286,
+	"startColumn": 2,
+	"endLineNumber": 286,
+	"endColumn": 77,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 291; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 300,
+	"startColumn": 2,
+	"endLineNumber": 300,
+	"endColumn": 63,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 305; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 310,
+	"startColumn": 2,
+	"endLineNumber": 310,
+	"endColumn": 60,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 315; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 326,
+	"startColumn": 3,
+	"endLineNumber": 326,
+	"endColumn": 66,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 336; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 347,
+	"startColumn": 2,
+	"endLineNumber": 347,
+	"endColumn": 57,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 352; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 363,
+	"startColumn": 2,
+	"endLineNumber": 363,
+	"endColumn": 59,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "16",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "implicitreturn-16"
+		}
+	},
+	"severity": 4,
+	"message": "ImplicitReturn: Function can implicitly return no values even though there's an explicit return at line 402; add explicit return to silence",
+	"source": "Luau",
+	"startLineNumber": 406,
+	"startColumn": 2,
+	"endLineNumber": 406,
+	"endColumn": 97,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+},{
+	"resource": "/c:/Users/youse/OneDrive/Documents/Project Imperium Stuff/src/ServerScriptService/CommandServer.server.lua",
+	"owner": "luau",
+	"code": {
+		"value": "23",
+		"target": {
+			"$mid": 1,
+			"path": "/lint",
+			"scheme": "https",
+			"authority": "luau.org",
+			"fragment": "tableoperations-23"
+		}
+	},
+	"severity": 4,
+	"message": "TableOperations: Using '#' on a table with string keys is likely a bug",
+	"source": "Luau",
+	"startLineNumber": 455,
+	"startColumn": 58,
+	"endLineNumber": 455,
+	"endColumn": 67,
+	"modelVersionId": 2,
+	"origin": "extHost1"
+}]
