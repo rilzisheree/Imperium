@@ -45,7 +45,7 @@ local CFG = {
         BUBBLE_BG_TRANS     = 0.08,
         BUBBLE_TEXT_COLOR   = Color3.fromRGB(30, 30, 30),    -- near-black
         BUBBLE_FONT         = Enum.Font.GothamSemibold,
-        BUBBLE_TEXT_SIZE    = 14,
+        BUBBLE_TEXT_SIZE    = 16,
         BUBBLE_MAX_WIDTH    = 240,   -- px — wraps beyond this
         BUBBLE_PADDING_H    = 20,    -- horizontal inner padding
         BUBBLE_PADDING_V    = 10,    -- vertical inner padding
@@ -57,8 +57,9 @@ local CFG = {
 
         -- Timing
         HOLD_DURATION       = 7,     -- seconds bubble stays fully visible
-        FADE_IN_TIME        = 0.15,
+        FADE_IN_TIME        = 0.35,  -- slower fade so it feels smooth
         FADE_OUT_TIME       = 0.8,
+        SLIDE_DISTANCE      = 0.5,   -- studs the bubble rises during entrance
 
         -- Input bar
         INPUT_BG_COLOR      = Color3.fromRGB(20, 20, 20),
@@ -82,7 +83,7 @@ inputGui.Parent         = PlayerGui
 local inputFrame = Instance.new("Frame")
 inputFrame.Name                 = "InputFrame"
 inputFrame.Size                 = UDim2.new(0, CFG.INPUT_WIDTH, 0, CFG.INPUT_HEIGHT)
-inputFrame.Position             = UDim2.new(0, 4, 0, 48)   -- just below the Roblox topbar
+inputFrame.Position             = UDim2.new(0, 4, 0, 56)   -- just below the Roblox topbar
 inputFrame.BackgroundColor3     = CFG.INPUT_BG_COLOR
 inputFrame.BackgroundTransparency = CFG.INPUT_BG_TRANS
 inputFrame.BorderSizePixel      = 0
@@ -164,7 +165,7 @@ local function createBubble(character: Model, text: string)
         billboard.Name              = "ProxChatBubble"
         billboard.AlwaysOnTop       = false
         billboard.MaxDistance       = 0
-        billboard.StudsOffset       = Vector3.new(0, 2.2, 0)
+        billboard.StudsOffset       = Vector3.new(0, 2.2 - CFG.SLIDE_DISTANCE, 0) -- starts low, slides up
         -- Size in pixels matching our computed bubble size
         billboard.Size              = UDim2.new(0, bubbleW, 0, bubbleH)
         billboard.SizeOffset        = Vector2.new(0, 0)
@@ -217,16 +218,17 @@ local function createBubble(character: Model, text: string)
                 return t
         end
 
-        -- Start invisible
+        -- Start invisible and low
         bubble.BackgroundTransparency = 1
         label.TextTransparency = 1
 
         -- Spawn the lifecycle in a new task so we can cancel it
         activeBubbles[character.Name] = task.spawn(function()
-                -- Fade in
+                -- Slide up + fade in simultaneously
                 local inInfo = TweenInfo.new(CFG.FADE_IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                tweenTransparency(bubble, inInfo, { BackgroundTransparency = CFG.BUBBLE_BG_TRANS })
-                tweenTransparency(label,  inInfo, { TextTransparency = 0 })
+                tweenTransparency(bubble,     inInfo, { BackgroundTransparency = CFG.BUBBLE_BG_TRANS })
+                tweenTransparency(label,      inInfo, { TextTransparency = 0 })
+                tweenTransparency(billboard,  inInfo, { StudsOffset = Vector3.new(0, 2.2, 0) })
                 task.wait(CFG.FADE_IN_TIME)
 
                 -- Hold
