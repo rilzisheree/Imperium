@@ -47,8 +47,8 @@ local CFG = {
         BUBBLE_FONT         = Enum.Font.GothamSemibold,
         BUBBLE_TEXT_SIZE    = 14,
         BUBBLE_MAX_WIDTH    = 240,   -- px — wraps beyond this
-        BUBBLE_PADDING_H    = 14,    -- horizontal inner padding
-        BUBBLE_PADDING_V    = 6,     -- vertical inner padding
+        BUBBLE_PADDING_H    = 20,    -- horizontal inner padding
+        BUBBLE_PADDING_V    = 10,    -- vertical inner padding
         BUBBLE_CORNER       = 12,    -- UICorner radius (px)
 
         -- BillboardGui sizing & offset
@@ -56,7 +56,7 @@ local CFG = {
         BILLBOARD_HEAD_OFFSET = 2.4, -- studs above HumanoidRootPart
 
         -- Timing
-        HOLD_DURATION       = 5,     -- seconds bubble stays fully visible
+        HOLD_DURATION       = 7,     -- seconds bubble stays fully visible
         FADE_IN_TIME        = 0.15,
         FADE_OUT_TIME       = 0.8,
 
@@ -82,7 +82,7 @@ inputGui.Parent         = PlayerGui
 local inputFrame = Instance.new("Frame")
 inputFrame.Name                 = "InputFrame"
 inputFrame.Size                 = UDim2.new(0, CFG.INPUT_WIDTH, 0, CFG.INPUT_HEIGHT)
-inputFrame.Position             = UDim2.new(0, 4, 0, 42)   -- just below the Roblox topbar
+inputFrame.Position             = UDim2.new(0, 4, 0, 48)   -- just below the Roblox topbar
 inputFrame.BackgroundColor3     = CFG.INPUT_BG_COLOR
 inputFrame.BackgroundTransparency = CFG.INPUT_BG_TRANS
 inputFrame.BorderSizePixel      = 0
