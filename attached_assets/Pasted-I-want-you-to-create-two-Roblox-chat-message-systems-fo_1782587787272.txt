@@ -1,0 +1,102 @@
+I want you to create two Roblox chat/message systems for my game.
+
+## 1. Narration System (`:sm`)
+
+Create a command called `:sm`.
+
+**Syntax**
+
+```
+:sm <message>
+```
+
+**Behavior**
+
+* Displays the provided message to **every player**.
+* The message should appear at the **bottom-center of the screen**.
+* It should fade in smoothly.
+* Remain visible for a few seconds.
+* Then fade out smoothly and disappear.
+* If another narration is sent while one is active, it should queue or replace the current one cleanly (no overlapping animations).
+* The UI should be clean, modern, and readable, suitable for roleplay.
+
+Example:
+
+```
+:sm A cold breeze sweeps through the streets...
+```
+
+All players would see:
+
+> A cold breeze sweeps through the streets...
+
+---
+
+## 2. Inner Message System (`:im`)
+
+Create a command called `:im`.
+
+### Targeted Player
+
+```
+:im <player> <message>
+```
+
+Only the specified player should receive the message.
+
+Example:
+
+```
+:im John You feel an uneasy presence nearby.
+```
+
+Only John sees:
+
+> You feel an uneasy presence nearby.
+
+---
+
+### Everyone
+
+```
+:im all <message>
+```
+
+Sends the inner message to every player individually.
+
+Example:
+
+```
+:im all Your instincts tell you something is wrong.
+```
+
+Everyone sees:
+
+> Your instincts tell you something is wrong.
+
+---
+
+## UI Requirements
+
+* Appears at the bottom-center of the screen.
+* Smooth fade-in animation.
+* Smooth fade-out animation.
+* Slight transparency.
+* Rounded corners.
+* Modern roleplay aesthetic.
+* Automatically sizes based on message length.
+* Supports long messages by wrapping text.
+* Uses Roblox TweenService for all animations.
+* Mobile and PC compatible.
+* Does not interfere with other UI elements.
+* Messages should never stack visually; they should queue or replace gracefully.
+
+## Technical Requirements
+
+* Server validates commands.
+* Client handles UI display.
+* Communication via RemoteEvents.
+* Clean, modular code.
+* Easy to customize duration, colors, fonts, and animations.
+* Well-commented code.
+* No deprecated Roblox APIs.
