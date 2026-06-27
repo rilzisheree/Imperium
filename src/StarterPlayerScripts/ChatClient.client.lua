@@ -142,7 +142,7 @@ charCounter.Parent              = inputFrame
 -- Stacking is pure pixel math — perfectly consistent at every zoom level.
 
 local PIXELS_ABOVE_HEAD = 20   -- gap between head top and the bottom of the stack
-local REFERENCE_DIST    = 20   -- studs at which UIScale = 1.0 (bubbles look "normal")
+local REFERENCE_DIST    = 15   -- studs at which UIScale = 1.0 (bubbles look "normal")
 local Camera            = workspace.CurrentCamera
 
 -- ScreenGui that holds all bubble stacks
