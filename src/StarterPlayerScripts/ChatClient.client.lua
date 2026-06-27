@@ -45,7 +45,7 @@ local CFG = {
         BUBBLE_BG_TRANS     = 0.08,
         BUBBLE_TEXT_COLOR   = Color3.fromRGB(30, 30, 30),    -- near-black
         BUBBLE_FONT         = Enum.Font.GothamSemibold,
-        BUBBLE_TEXT_SIZE    = 16,
+        BUBBLE_TEXT_SIZE    = 18,
         BUBBLE_MAX_WIDTH    = 240,   -- px — wraps beyond this
         BUBBLE_PADDING_H    = 20,    -- horizontal inner padding
         BUBBLE_PADDING_V    = 10,    -- vertical inner padding
@@ -83,7 +83,7 @@ inputGui.Parent         = PlayerGui
 local inputFrame = Instance.new("Frame")
 inputFrame.Name                 = "InputFrame"
 inputFrame.Size                 = UDim2.new(0, CFG.INPUT_WIDTH, 0, CFG.INPUT_HEIGHT)
-inputFrame.Position             = UDim2.new(0, 4, 0, 56)   -- just below the Roblox topbar
+inputFrame.Position             = UDim2.new(0, 4, 0, 60)   -- just below the Roblox topbar
 inputFrame.BackgroundColor3     = CFG.INPUT_BG_COLOR
 inputFrame.BackgroundTransparency = CFG.INPUT_BG_TRANS
 inputFrame.BorderSizePixel      = 0
@@ -126,81 +126,107 @@ charCounter.TextYAlignment      = Enum.TextYAlignment.Center
 charCounter.Parent              = inputFrame
 
 -- ─── Bubble builder ───────────────────────────────────────────────────────────
+--
+-- Each character gets ONE shared BillboardGui with a vertical list inside.
+-- Every message adds its own frame to that list and manages its own lifecycle.
+-- Messages stack and fade independently — no cancellation of earlier ones.
 
--- Active bubble threads per character (keyed by player Name)
-local activeBubbles: { [string]: thread } = {}
+-- Stores {billboard, listFrame, count} per character name
+local characterContainers = {}
 
-local function createBubble(character: Model, text: string)
-        -- Cancel any existing bubble for this character
-        if activeBubbles[character.Name] then
-                task.cancel(activeBubbles[character.Name])
-                activeBubbles[character.Name] = nil
+local BILLBOARD_MAX_HEIGHT = 320  -- px — enough for ~5 stacked messages
+local BUBBLE_GAP           = 4    -- px gap between stacked bubbles
+
+local function getOrCreateContainer(character: Model, attachPart: BasePart)
+        local existing = characterContainers[character.Name]
+        if existing and existing.billboard and existing.billboard.Parent == character then
+                return existing
         end
 
-        -- Remove any stale BillboardGui
-        local old = character:FindFirstChild("ProxChatBubble")
-        if old then old:Destroy() end
+        local maxW = CFG.BUBBLE_MAX_WIDTH + CFG.BUBBLE_PADDING_H * 2
 
-        -- Find attachment point (Head preferred, fallback HumanoidRootPart)
-        local head = character:FindFirstChild("Head")
-        local attachPart = head or character:FindFirstChild("HumanoidRootPart")
-        if not attachPart then return end
-
-        -- ── Measure text so the bubble shrinks to fit ─────────────────────────────
-        -- GetTextSize returns the bounding box for the given constraints
-        local measured = TextService:GetTextSize(
-                text,
-                CFG.BUBBLE_TEXT_SIZE,
-                CFG.BUBBLE_FONT,
-                Vector2.new(CFG.BUBBLE_MAX_WIDTH, 1000)
-        )
-        -- Clamp: short text uses measured width, long text wraps at MAX_WIDTH
-        local labelW   = math.min(measured.X, CFG.BUBBLE_MAX_WIDTH)
-        local labelH   = measured.Y  -- height after wrapping
-        local bubbleW  = labelW  + CFG.BUBBLE_PADDING_H * 2
-        local bubbleH  = labelH  + CFG.BUBBLE_PADDING_V * 2
-
-        -- ── BillboardGui — sized exactly to the bubble content ────────────────────
+        -- One BillboardGui lives above the character's head
         local billboard = Instance.new("BillboardGui")
         billboard.Name              = "ProxChatBubble"
         billboard.AlwaysOnTop       = false
         billboard.MaxDistance       = 0
-        billboard.StudsOffset       = Vector3.new(0, 2.2 - CFG.SLIDE_DISTANCE, 0) -- starts low, slides up
-        -- Size in pixels matching our computed bubble size
-        billboard.Size              = UDim2.new(0, bubbleW, 0, bubbleH)
+        billboard.StudsOffset       = Vector3.new(0, 2.2, 0)
+        billboard.Size              = UDim2.new(0, maxW, 0, BILLBOARD_MAX_HEIGHT)
         billboard.SizeOffset        = Vector2.new(0, 0)
         billboard.ResetOnSpawn      = false
         billboard.AutoLocalize      = false
         billboard.Adornee           = attachPart
         billboard.Parent            = character
 
-        -- ── Container frame — fills the billboard exactly ─────────────────────────
+        -- Stack frame: messages pile from the bottom upward
+        local listFrame = Instance.new("Frame")
+        listFrame.Name              = "Stack"
+        listFrame.BackgroundTransparency = 1
+        listFrame.Size              = UDim2.new(1, 0, 1, 0)
+        listFrame.Position          = UDim2.new(0, 0, 0, 0)
+        listFrame.Parent            = billboard
+
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection        = Enum.FillDirection.Vertical
+        layout.VerticalAlignment    = Enum.VerticalAlignment.Bottom
+        layout.HorizontalAlignment  = Enum.HorizontalAlignment.Center
+        layout.SortOrder            = Enum.SortOrder.LayoutOrder
+        layout.Padding              = UDim.new(0, BUBBLE_GAP)
+        layout.Parent               = listFrame
+
+        local container = { billboard = billboard, listFrame = listFrame, count = 0 }
+        characterContainers[character.Name] = container
+        return container
+end
+
+local messageOrder = 0  -- global incrementing layout order
+
+local function createBubble(character: Model, text: string)
+        -- Find attachment point
+        local head      = character:FindFirstChild("Head")
+        local attachPart = head or character:FindFirstChild("HumanoidRootPart")
+        if not attachPart then return end
+
+        local container = getOrCreateContainer(character, attachPart)
+        container.count += 1
+        messageOrder += 1
+
+        -- ── Measure text → size this bubble to fit ────────────────────────────────
+        local measured = TextService:GetTextSize(
+                text,
+                CFG.BUBBLE_TEXT_SIZE,
+                CFG.BUBBLE_FONT,
+                Vector2.new(CFG.BUBBLE_MAX_WIDTH, 1000)
+        )
+        local labelW  = math.min(measured.X, CFG.BUBBLE_MAX_WIDTH)
+        local labelH  = measured.Y
+        local bubbleW = labelW + CFG.BUBBLE_PADDING_H * 2
+        local bubbleH = labelH + CFG.BUBBLE_PADDING_V * 2
+
+        -- ── Bubble frame (sits inside the shared list) ────────────────────────────
         local bubble = Instance.new("Frame")
         bubble.Name                 = "Bubble"
-        bubble.AnchorPoint          = Vector2.new(0.5, 0.5)
-        bubble.Position             = UDim2.new(0.5, 0, 0.5, 0)
-        bubble.Size                 = UDim2.new(1, 0, 1, 0)
+        bubble.LayoutOrder          = messageOrder
+        bubble.Size                 = UDim2.new(0, bubbleW, 0, bubbleH)
         bubble.BackgroundColor3     = CFG.BUBBLE_BG_COLOR
-        bubble.BackgroundTransparency = CFG.BUBBLE_BG_TRANS
+        bubble.BackgroundTransparency = 1          -- start invisible
         bubble.BorderSizePixel      = 0
-        bubble.Parent               = billboard
+        bubble.Parent               = container.listFrame
 
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, CFG.BUBBLE_CORNER)
         corner.Parent = bubble
 
-        local padding = Instance.new("UIPadding")
-        padding.PaddingLeft   = UDim.new(0, CFG.BUBBLE_PADDING_H)
-        padding.PaddingRight  = UDim.new(0, CFG.BUBBLE_PADDING_H)
-        padding.PaddingTop    = UDim.new(0, CFG.BUBBLE_PADDING_V)
-        padding.PaddingBottom = UDim.new(0, CFG.BUBBLE_PADDING_V)
-        padding.Parent = bubble
+        local pad = Instance.new("UIPadding")
+        pad.PaddingLeft   = UDim.new(0, CFG.BUBBLE_PADDING_H)
+        pad.PaddingRight  = UDim.new(0, CFG.BUBBLE_PADDING_H)
+        pad.PaddingTop    = UDim.new(0, CFG.BUBBLE_PADDING_V)
+        pad.PaddingBottom = UDim.new(0, CFG.BUBBLE_PADDING_V)
+        pad.Parent = bubble
 
-        -- ── Text label — sized to match measured bounds ────────────────────────────
         local label = Instance.new("TextLabel")
         label.Name                  = "ChatText"
         label.BackgroundTransparency = 1
-        -- Use exact measured size so no extra whitespace appears
         label.Size                  = UDim2.new(0, labelW, 0, labelH)
         label.Font                  = CFG.BUBBLE_FONT
         label.TextSize              = CFG.BUBBLE_TEXT_SIZE
@@ -208,27 +234,25 @@ local function createBubble(character: Model, text: string)
         label.TextXAlignment        = Enum.TextXAlignment.Center
         label.TextYAlignment        = Enum.TextYAlignment.Center
         label.TextWrapped           = true
+        label.TextTransparency      = 1           -- start invisible
         label.Text                  = text
         label.Parent                = bubble
 
-        -- ── Animate: fade in → hold → fade out ───────────────────────────────────
-        local function tweenTransparency(target, tweenInfo, props)
-                local t = TweenService:Create(target, tweenInfo, props)
-                t:Play()
-                return t
+        -- ── Slide-up helper: animate a UDim2 position offset ─────────────────────
+        local function tween(target, info, props)
+                TweenService:Create(target, info, props):Play()
         end
 
-        -- Start invisible and low
-        bubble.BackgroundTransparency = 1
-        label.TextTransparency = 1
-
-        -- Spawn the lifecycle in a new task so we can cancel it
-        activeBubbles[character.Name] = task.spawn(function()
-                -- Slide up + fade in simultaneously
+        -- ── Lifecycle: slide-up fade-in → hold → fade-out → destroy ──────────────
+        task.spawn(function()
+                -- Slide up: briefly offset the bubble frame downward, then tween back up
+                bubble.Position = UDim2.new(0.5, -bubbleW / 2, 0, CFG.SLIDE_DISTANCE * 20)
                 local inInfo = TweenInfo.new(CFG.FADE_IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                tweenTransparency(bubble,     inInfo, { BackgroundTransparency = CFG.BUBBLE_BG_TRANS })
-                tweenTransparency(label,      inInfo, { TextTransparency = 0 })
-                tweenTransparency(billboard,  inInfo, { StudsOffset = Vector3.new(0, 2.2, 0) })
+                tween(bubble, inInfo, {
+                        BackgroundTransparency = CFG.BUBBLE_BG_TRANS,
+                        Position = UDim2.new(0.5, -bubbleW / 2, 0, 0),
+                })
+                tween(label, inInfo, { TextTransparency = 0 })
                 task.wait(CFG.FADE_IN_TIME)
 
                 -- Hold
@@ -236,15 +260,21 @@ local function createBubble(character: Model, text: string)
 
                 -- Fade out
                 local outInfo = TweenInfo.new(CFG.FADE_OUT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-                tweenTransparency(bubble, outInfo, { BackgroundTransparency = 1 })
-                tweenTransparency(label,  outInfo, { TextTransparency = 1 })
+                tween(bubble, outInfo, { BackgroundTransparency = 1 })
+                tween(label,  outInfo, { TextTransparency = 1 })
                 task.wait(CFG.FADE_OUT_TIME)
 
-                -- Clean up
-                if billboard and billboard.Parent then
-                        billboard:Destroy()
+                -- Remove this bubble from the stack
+                bubble:Destroy()
+                container.count -= 1
+
+                -- Clean up the shared billboard if no messages remain
+                if container.count <= 0 then
+                        if container.billboard and container.billboard.Parent then
+                                container.billboard:Destroy()
+                        end
+                        characterContainers[character.Name] = nil
                 end
-                activeBubbles[character.Name] = nil
         end)
 end
 
