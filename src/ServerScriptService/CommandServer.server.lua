@@ -34,7 +34,7 @@ local CommandRegistry = require(ReplicatedStorage:WaitForChild("CommandRegistry"
 local STAFF_CONFIG = {
 	-- Direct UserId → tier overrides (add your own UserId here for testing)
 	STAFF_IDS = {
-		-- [123456789] = "Owner",
+		-- [1872507151] = "Owner",
 		-- [987654321] = "Admin",
 	},
 
