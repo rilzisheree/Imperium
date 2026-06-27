@@ -1,0 +1,12 @@
+# Rojo
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
