@@ -381,11 +381,9 @@ local function buildPsRow(index: number): Frame
         hitBtn.MouseButton1Click:Connect(function()
                 local chosen = filteredPlayers[index]
                 if not chosen then return end
-                local tokens = CommandRegistry.parseArgs(inputBox.Text)
-                -- Replace the last partially-typed token with the chosen name
-                local base = tokens[1] and table.concat(tokens, " ", 1, math.max(1, #tokens - 1)) or ""
-                local needsSpace = base ~= "" and inputBox.Text:sub(-1) ~= " "
-                inputBox.Text = base .. (needsSpace and " " or (base ~= "" and " " or "")) .. chosen .. " "
+                local name   = chosen:gsub(" %(me%)$", "")
+                local prefix = inputBox.Text:match("^(.*%s)") or ""
+                inputBox.Text = prefix .. name .. " "
                 inputBox:CaptureFocus()
                 task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
         end)
@@ -545,26 +543,11 @@ local notifAccentCorner = Instance.new("UICorner")
 notifAccentCorner.CornerRadius = UDim.new(0, 2)
 notifAccentCorner.Parent = notifAccent
 
--- Icon label
-local notifIcon = Instance.new("TextLabel")
-notifIcon.Name                  = "Icon"
-notifIcon.Size                  = UDim2.new(0, 32, 1, 0)
-notifIcon.Position              = UDim2.new(0, 16, 0, 0)
-notifIcon.BackgroundTransparency = 1
-notifIcon.Font                  = Enum.Font.GothamBold
-notifIcon.TextSize              = 18
-notifIcon.TextColor3            = CFG.PROMPT_COLOR
-notifIcon.TextXAlignment        = Enum.TextXAlignment.Center
-notifIcon.TextYAlignment        = Enum.TextYAlignment.Center
-notifIcon.Text                  = "✓"
-notifIcon.ZIndex                = 21
-notifIcon.Parent                = notifFrame
-
--- Message label
+-- Message label (no icon — spans the full card beside the accent bar)
 local notifLabel = Instance.new("TextLabel")
 notifLabel.Name                  = "Label"
-notifLabel.Size                  = UDim2.new(1, -56, 1, 0)
-notifLabel.Position              = UDim2.new(0, 50, 0, 0)
+notifLabel.Size                  = UDim2.new(1, -22, 1, 0)
+notifLabel.Position              = UDim2.new(0, 18, 0, 0)
 notifLabel.BackgroundTransparency = 1
 notifLabel.Font                  = CFG.FONT
 notifLabel.TextSize              = 13
