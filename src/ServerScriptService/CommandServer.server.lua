@@ -421,6 +421,12 @@ HANDLERS["logs"] = function(executor, _args)
         ok(executor, "Log retrieval: connect to a DataStore-backed log system here.")
 end
 
+-- whoami  (debug: shows your UserId and tier)
+HANDLERS["whoami"] = function(executor, _args)
+        local tier = getTier(executor)
+        ok(executor, "UserId: " .. executor.UserId .. " | Tier: " .. (tier or "none (not staff)"))
+end
+
 -- spectate <player>  (client-side only — server acknowledges)
 HANDLERS["spectate"] = function(executor, args)
         if not args[1] then fail(executor, "Usage: spectate <player>") return end
