@@ -2,9 +2,9 @@
         CommandEffects.client.lua
         LocalScript — StarterPlayerScripts
 
-        SM — "[ Server Message ]" header line + message below it, 20% down, centred
-        IM — message only, 70% down (20% below centre), centred
-        Both: white serif text, fade in → hold → fade out. No background box. No vignette.
+        SM — edge vignette + "[ Server Message ]" header (large) + smaller message text, 20% down
+        IM — edge vignette (lighter) + message text, 70% down (20% below centre)
+        Vignette fades in/out by tweening BackgroundTransparency on each gradient frame.
 --]]
 
 local Players           = game:GetService("Players")
@@ -33,7 +33,7 @@ gui.ResetOnSpawn    = false
 gui.IgnoreGuiInset  = true
 gui.Parent          = PlayerGui
 
--- ─── Shared serif font ─────────────────────────────────────────────────────────
+-- ─── Fonts ─────────────────────────────────────────────────────────────────────
 local FONT_BOLD = Font.new(
         "rbxasset://fonts/families/Merriweather.json",
         Enum.FontWeight.Bold,
@@ -50,18 +50,60 @@ local FONT_REG = Font.new(
         Enum.FontStyle.Normal
 )
 
--- ─── SM — header label ────────────────────────────────────────────────────────
--- Sits slightly above the message body (15% down)
+-- ─── Vignette frames ───────────────────────────────────────────────────────────
+-- BackgroundTransparency is tweened 1→target to fade in, target→1 to fade out.
+-- UIGradient makes each frame opaque at its edge and transparent toward centre.
+-- When BackgroundTransparency=1 the whole frame is invisible; at 0 it is fully dark.
+
+local vigFrames = {}   -- list of all 4 frames so we can tween them together
+
+local function makeVigFrame(size, position, anchor, gradRot)
+        local f = Instance.new("Frame")
+        f.Size                   = size
+        f.Position               = position
+        f.AnchorPoint            = anchor
+        f.BackgroundColor3       = Color3.fromRGB(0, 0, 0)
+        f.BackgroundTransparency = 1           -- starts invisible
+        f.BorderSizePixel        = 0
+        f.ZIndex                 = 4
+        f.Parent                 = gui
+
+        local g = Instance.new("UIGradient")
+        g.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0,    0),    -- opaque at edge
+                NumberSequenceKeypoint.new(0.55, 0.65),
+                NumberSequenceKeypoint.new(1,    1),    -- transparent toward centre
+        })
+        g.Rotation = gradRot
+        g.Parent   = f
+
+        table.insert(vigFrames, f)
+        return f
+end
+
+makeVigFrame(UDim2.new(1, 0, 0.48, 0),  UDim2.new(0, 0, 0, 0), Vector2.new(0, 0),  90)   -- top
+makeVigFrame(UDim2.new(1, 0, 0.48, 0),  UDim2.new(0, 0, 1, 0), Vector2.new(0, 1), -90)   -- bottom
+makeVigFrame(UDim2.new(0.32, 0, 1, 0),  UDim2.new(0, 0, 0, 0), Vector2.new(0, 0),   0)   -- left
+makeVigFrame(UDim2.new(0.32, 0, 1, 0),  UDim2.new(1, 0, 0, 0), Vector2.new(1, 0), 180)   -- right
+
+local function tweenVig(target, time)
+        for _, f in vigFrames do
+                tw(f, time, { BackgroundTransparency = target })
+        end
+end
+
+-- ─── SM labels ─────────────────────────────────────────────────────────────────
+-- Header is big; message body is smaller underneath it.
 
 local smHeader = Instance.new("TextLabel")
 smHeader.Name                   = "SMHeader"
-smHeader.AnchorPoint            = Vector2.new(0.5, 1)      -- anchor bottom-centre
-smHeader.Position               = UDim2.new(0.5, 0, 0.20, -6)  -- just above body
-smHeader.Size                   = UDim2.new(0.70, 0, 0, 24)
+smHeader.AnchorPoint            = Vector2.new(0.5, 1)
+smHeader.Position               = UDim2.new(0.5, 0, 0.20, -4)
+smHeader.Size                   = UDim2.new(0.75, 0, 0, 38)
 smHeader.BackgroundTransparency = 1
-smHeader.TextColor3             = Color3.fromRGB(210, 210, 210)
+smHeader.TextColor3             = Color3.fromRGB(255, 255, 255)
 smHeader.TextTransparency       = 1
-smHeader.TextSize               = 15
+smHeader.TextSize               = 30              -- bigger header
 smHeader.FontFace               = FONT_ITALIC
 smHeader.Text                   = "[ Server Message ]"
 smHeader.TextXAlignment         = Enum.TextXAlignment.Center
@@ -70,17 +112,15 @@ smHeader.ZIndex                 = 10
 smHeader.Visible                = false
 smHeader.Parent                 = gui
 
--- ─── SM — body label ──────────────────────────────────────────────────────────
-
 local smBody = Instance.new("TextLabel")
 smBody.Name                   = "SMBody"
-smBody.AnchorPoint            = Vector2.new(0.5, 0)        -- anchor top-centre
-smBody.Position               = UDim2.new(0.5, 0, 0.20, 6) -- just below header
-smBody.Size                   = UDim2.new(0.70, 0, 0, 130)
+smBody.AnchorPoint            = Vector2.new(0.5, 0)
+smBody.Position               = UDim2.new(0.5, 0, 0.20, 4)
+smBody.Size                   = UDim2.new(0.70, 0, 0, 110)
 smBody.BackgroundTransparency = 1
 smBody.TextColor3             = Color3.fromRGB(255, 255, 255)
 smBody.TextTransparency       = 1
-smBody.TextSize               = 44
+smBody.TextSize               = 28              -- smaller body text
 smBody.FontFace               = FONT_BOLD
 smBody.Text                   = ""
 smBody.TextWrapped            = true
@@ -91,8 +131,7 @@ smBody.ZIndex                 = 10
 smBody.Visible                = false
 smBody.Parent                 = gui
 
--- ─── IM — single label ────────────────────────────────────────────────────────
--- 70% down = 20% below centre
+-- ─── IM label ──────────────────────────────────────────────────────────────────
 
 local imLabel = Instance.new("TextLabel")
 imLabel.Name                   = "IMLabel"
@@ -106,14 +145,13 @@ imLabel.TextSize               = 27
 imLabel.FontFace               = FONT_REG
 imLabel.Text                   = ""
 imLabel.TextWrapped            = true
-imLabel.TextScaled             = false
 imLabel.TextXAlignment         = Enum.TextXAlignment.Center
 imLabel.TextYAlignment         = Enum.TextYAlignment.Center
 imLabel.ZIndex                 = 10
 imLabel.Visible                = false
 imLabel.Parent                 = gui
 
--- ─── Timing ────────────────────────────────────────────────────────────────────
+-- ─── Timing & hold ─────────────────────────────────────────────────────────────
 
 local FADE_IN  = 0.60
 local FADE_OUT = 0.65
@@ -123,19 +161,20 @@ local function calcHold(text: string): number
         return math.clamp(words * 0.45, 4, 10)
 end
 
--- ─── Cancellation token ────────────────────────────────────────────────────────
--- Replaced by a new table reference on each new message so old delays no-op.
+-- ─── Cancellation ──────────────────────────────────────────────────────────────
 
 local activeToken = {}
 
 local function cancelAll()
         activeToken = {}
-        smHeader.Visible         = false
+        -- snap everything invisible immediately
+        for _, f in vigFrames do f.BackgroundTransparency = 1 end
+        smHeader.Visible          = false
         smHeader.TextTransparency = 1
-        smBody.Visible           = false
-        smBody.TextTransparency  = 1
-        imLabel.Visible          = false
-        imLabel.TextTransparency = 1
+        smBody.Visible            = false
+        smBody.TextTransparency   = 1
+        imLabel.Visible           = false
+        imLabel.TextTransparency  = 1
 end
 
 -- ─── SM ────────────────────────────────────────────────────────────────────────
@@ -146,17 +185,19 @@ local function showSM(text: string)
         activeToken = token
 
         smBody.Text = text
-
         smHeader.Visible          = true
         smHeader.TextTransparency = 1
         smBody.Visible            = true
         smBody.TextTransparency   = 1
 
-        tw(smHeader, FADE_IN, { TextTransparency = 0.15 })
+        -- vignette SM: full dark (target 0)
+        tweenVig(0, FADE_IN)
+        tw(smHeader, FADE_IN, { TextTransparency = 0.10 })
         tw(smBody,   FADE_IN, { TextTransparency = 0    })
 
         task.delay(FADE_IN + calcHold(text), function()
                 if activeToken ~= token then return end
+                tweenVig(1, FADE_OUT)
                 tw(smHeader, FADE_OUT, { TextTransparency = 1 })
                 tw(smBody,   FADE_OUT, { TextTransparency = 1 })
                 task.delay(FADE_OUT + 0.05, function()
@@ -178,10 +219,13 @@ local function showIM(text: string)
         imLabel.Visible          = true
         imLabel.TextTransparency = 1
 
+        -- vignette IM: lighter (target 0.45)
+        tweenVig(0.45, FADE_IN)
         tw(imLabel, FADE_IN, { TextTransparency = 0 })
 
         task.delay(FADE_IN + calcHold(text), function()
                 if activeToken ~= token then return end
+                tweenVig(1, FADE_OUT)
                 tw(imLabel, FADE_OUT, { TextTransparency = 1 })
                 task.delay(FADE_OUT + 0.05, function()
                         if activeToken ~= token then return end
