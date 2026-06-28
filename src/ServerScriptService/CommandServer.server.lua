@@ -950,28 +950,39 @@ Players.PlayerRemoving:Connect(function(player: Player)
 end)
 
 -- ─── Listen for serverbring requests from other servers ───────────────────────
-pcall(function()
-        MessagingService:SubscribeAsync("ServerbringRequest", function(message)
-                local data = message.Data
-                if typeof(data) ~= "table" then return end
-                local targetName = data.targetName
-                local jobId      = data.jobId
-                local placeId    = data.placeId
+-- IMPORTANT: SubscribeAsync yields, so run it in a background task so the main
+-- thread reaches CommandExecuted.OnServerEvent:Connect immediately.
+task.spawn(function()
+        pcall(function()
+                MessagingService:SubscribeAsync("ServerbringRequest", function(message)
+                        local data = message.Data
+                        if typeof(data) ~= "table" then return end
+                        local targetName = data.targetName
+                        local jobId      = data.jobId
+                        local placeId    = data.placeId
 
-                local target = Players:FindFirstChild(targetName)
-                if target then
-                        local opts = Instance.new("TeleportOptions")
-                        opts.ServerInstanceId = jobId
-                        pcall(function()
-                                TeleportService:TeleportAsync(placeId, { target }, opts)
-                        end)
-                end
+                        local target = Players:FindFirstChild(targetName)
+                        if target then
+                                local opts = Instance.new("TeleportOptions")
+                                opts.ServerInstanceId = jobId
+                                pcall(function()
+                                        TeleportService:TeleportAsync(placeId, { target }, opts)
+                                end)
+                        end
+                end)
         end)
 end)
 
 -- ─── Incoming remote handler ───────────────────────────────────────────────────
 
 CommandRemotes.CommandExecuted.OnServerEvent:Connect(function(executor: Player, cmdName: string, args: { string })
+        -- Diagnostic: always log the raw call so we know the server received it
+        print(("[CommandServer] Received from %s: cmd=%s args=%s"):format(
+                executor.Name,
+                tostring(cmdName),
+                tostring(args and #args or 0)
+        ))
+
         if typeof(cmdName) ~= "string" then return end
         if typeof(args) ~= "table" then args = {} end
 

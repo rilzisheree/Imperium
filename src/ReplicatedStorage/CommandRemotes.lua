@@ -3,11 +3,8 @@
         ModuleScript — ReplicatedStorage
 
         Central module for all RemoteEvents used by the staff command bar.
-        Both client and server require this to share the same instances.
-
-        FIX: RemoteEvents must be created server-side only. The client now uses
-        WaitForChild so it always finds the server-created instance instead of
-        accidentally creating a local duplicate that the server never sees.
+        Uses getOrCreate so the server never makes duplicate RemoteEvents
+        when old ones already exist in the place file.
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,57 +12,48 @@ local RunService        = game:GetService("RunService")
 
 local CommandRemotes = {}
 
-if RunService:IsServer() then
-        local function create(name: string): RemoteEvent
-                local event = Instance.new("RemoteEvent")
-                event.Name   = name
-                event.Parent = ReplicatedStorage
-                return event
+-- Always find-or-create: prevents duplicate instances if the place file
+-- already contains a RemoteEvent with the same name from a previous version.
+local function getOrCreate(name: string): RemoteEvent
+        local existing = ReplicatedStorage:FindFirstChild(name)
+        if existing and existing:IsA("RemoteEvent") then
+                return existing
         end
+        local event = Instance.new("RemoteEvent")
+        event.Name   = name
+        event.Parent = ReplicatedStorage
+        return event
+end
 
-        -- ── Core command pipe ───────────────────────────────────────────────────
-        -- Client → Server: player submits a command
-        CommandRemotes.CommandExecuted  = create("CmdExecuted")
-        -- Server → Client: server sends result feedback (toast)
-        CommandRemotes.CommandFeedback  = create("CmdFeedback")
+if RunService:IsServer() then
+        -- Server: create (or reuse) every RemoteEvent so they replicate to clients.
+        CommandRemotes.CommandExecuted  = getOrCreate("CmdExecuted")
+        CommandRemotes.CommandFeedback  = getOrCreate("CmdFeedback")
+        CommandRemotes.Blind            = getOrCreate("CmdBlind")
+        CommandRemotes.SM               = getOrCreate("CmdSM")
+        CommandRemotes.IM               = getOrCreate("CmdIM")
+        CommandRemotes.PM               = getOrCreate("CmdPM")
+        CommandRemotes.Notif            = getOrCreate("CmdNotif")
+        CommandRemotes.Countdown        = getOrCreate("CmdCountdown")
+        CommandRemotes.ESP              = getOrCreate("CmdESP")
+        CommandRemotes.Fly              = getOrCreate("CmdFly")
+        CommandRemotes.Watch            = getOrCreate("CmdWatch")
+        CommandRemotes.ChatLogs         = getOrCreate("CmdChatLogs")
+        CommandRemotes.HelpUI           = getOrCreate("CmdHelpUI")
+        CommandRemotes.HelpReceive      = getOrCreate("CmdHelpReceive")
+        CommandRemotes.Music            = getOrCreate("CmdMusic")
+        CommandRemotes.Waypoint         = getOrCreate("CmdWaypoint")
+        CommandRemotes.HelpUIState      = getOrCreate("CmdHelpUIState")
 
-        -- ── Visual effects (Server → Client) ────────────────────────────────────
-        -- Blind: args (boolean isBlind)
-        CommandRemotes.Blind            = create("CmdBlind")
-        -- Server Message (narration): args (string message)
-        CommandRemotes.SM               = create("CmdSM")
-        -- Individual Message: args (string message)
-        CommandRemotes.IM               = create("CmdIM")
-        -- Private Message: args (string senderName, string message)
-        CommandRemotes.PM               = create("CmdPM")
-        -- Notification: args (string senderName, string message)
-        CommandRemotes.Notif            = create("CmdNotif")
-        -- Countdown: args (number seconds)
-        CommandRemotes.Countdown        = create("CmdCountdown")
-        -- ESP toggle: args (boolean enabled)
-        CommandRemotes.ESP              = create("CmdESP")
-        -- Fly toggle: args (boolean enabled)
-        CommandRemotes.Fly              = create("CmdFly")
-        -- Watch POV: args (string playerName or "" to stop)
-        CommandRemotes.Watch            = create("CmdWatch")
-        -- Chat logs: args (table logLines)
-        CommandRemotes.ChatLogs         = create("CmdChatLogs")
-        -- HelpUI state update: args (boolean enabled)
-        CommandRemotes.HelpUI           = create("CmdHelpUI")
-        -- Receive a help request: args (string senderName, string message)
-        CommandRemotes.HelpReceive      = create("CmdHelpReceive")
-        -- Music playback: args (number assetId, or 0 to stop)
-        CommandRemotes.Music            = create("CmdMusic")
-        -- Waypoint: args (string action "set"/"clear", number x, number y, number z, string label)
-        CommandRemotes.Waypoint         = create("CmdWaypoint")
-
-        -- ── Client → Server ──────────────────────────────────────────────────────
-        -- Client tells server their helpUI toggle state: args (boolean isOn)
-        CommandRemotes.HelpUIState      = create("CmdHelpUIState")
-
+        print("[CommandRemotes] All remotes ready on server.")
 else
+        -- Client: wait for server-created instances (never create them here).
         local function wait(name: string): RemoteEvent
-                return ReplicatedStorage:WaitForChild(name) :: RemoteEvent
+                local result = ReplicatedStorage:WaitForChild(name, 15)
+                if not result then
+                        warn("[CommandRemotes] Timed out waiting for remote: " .. name)
+                end
+                return result :: RemoteEvent
         end
 
         CommandRemotes.CommandExecuted  = wait("CmdExecuted")
@@ -85,6 +73,8 @@ else
         CommandRemotes.Music            = wait("CmdMusic")
         CommandRemotes.Waypoint         = wait("CmdWaypoint")
         CommandRemotes.HelpUIState      = wait("CmdHelpUIState")
+
+        print("[CommandRemotes] All remotes found on client.")
 end
 
 return CommandRemotes
