@@ -1,0 +1,64 @@
+For now, **do not implement any commands or backend functionality.** This task is **UI-only**.
+
+Update the custom command bar with the following changes:
+
+## Color Theme
+
+* Replace the current blue theme with a **yellow and black** theme.
+* Use black or dark gray as the primary background.
+* Use yellow for accents, highlights, borders, focus states, and icons.
+* Keep the design clean, modern, and suitable for an administration panel.
+
+## Command Bar Size
+
+* Increase the size of the command bar slightly.
+* Make it more comfortable to read and type in without taking up too much screen space.
+* Ensure it remains responsive on different screen sizes.
+
+## Player Suggestions UI
+
+Create the UI for a player suggestion dropdown, but **do not implement any functionality yet**.
+
+Requirements:
+
+* The dropdown appears directly beneath the command bar.
+* It matches the yellow and black theme.
+* Each player entry has a hover/highlight state.
+* The list should be scrollable.
+* Design it as if it will eventually display online players.
+* For now, placeholder entries are fine.
+
+Example:
+
+```text
+John
+James
+Jordan
+Jane
+```
+
+No filtering, searching, or selection logic should be implemented yet—only the UI.
+
+## Command Notification UI
+
+Create the UI for a command execution notification, but **do not implement the logic yet**.
+
+Requirements:
+
+* Positioned on the far right side of the screen.
+* Slides in from the right.
+* Uses the same yellow and black administration theme.
+* Modern appearance with rounded corners and subtle transparency.
+* Includes a success icon placeholder and placeholder text such as:
+
+```text
+✓ Command Executed
+```
+
+Only create the UI component and animation. It does not need to respond to actual commands yet.
+
+## General
+
+* Keep the existing UI structure modular.
+* Do not add any command parsing, networking, or backend code.
+* This task is purely to redesign and prepare the interface for future functionality.:::

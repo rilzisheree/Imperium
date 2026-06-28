@@ -13,11 +13,13 @@
 	  Tab       — accept the top autocomplete suggestion
 	  Click outside bar — close
 
-	UI Design:
-	  • Dark translucent console aesthetic (not chat-like)
+	UI Design (v2 — yellow/black administration theme):
+	  • Dark/black console aesthetic with yellow accents
 	  • Smooth slide-down + fade-in entrance animation
-	  • Autocomplete dropdown with command name coloured in accent blue
+	  • Autocomplete dropdown with command name coloured in accent yellow
 	  • Arg hint line below the input shows expected argument labels
+	  • Player suggestion panel (UI-only placeholder)
+	  • Right-side command notification that slides in from the edge
 	  • Feedback toasts appear bottom-right
 --]]
 
@@ -25,7 +27,6 @@ local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService  = game:GetService("UserInputService")
 local TweenService      = game:GetService("TweenService")
-local RunService        = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
@@ -38,25 +39,25 @@ local CommandRegistry = require(ReplicatedStorage:WaitForChild("CommandRegistry"
 local CFG = {
 	OPEN_KEY         = Enum.KeyCode.Semicolon,
 
-	-- Bar geometry
-	BAR_WIDTH        = 520,
-	BAR_HEIGHT       = 44,
-	BAR_Y_OPEN       = 72,    -- px from top when open
-	BAR_Y_CLOSED     = 52,    -- px from top when closed (slides up slightly)
+	-- Bar geometry (slightly larger than v1)
+	BAR_WIDTH        = 580,
+	BAR_HEIGHT       = 52,
+	BAR_Y_OPEN       = 80,
+	BAR_Y_CLOSED     = 58,
 	BAR_CORNER       = 8,
 
-	-- Colours
-	BG_DARK          = Color3.fromRGB(11, 11, 18),
-	BG_BORDER        = Color3.fromRGB(60, 65, 100),
-	BG_TRANS_OPEN    = 0.08,
+	-- ── Yellow / Black theme ──────────────────────────────────────────────────
+	BG_DARK          = Color3.fromRGB(10, 10, 12),
+	BG_BORDER        = Color3.fromRGB(220, 180, 0),
+	BG_TRANS_OPEN    = 0.06,
 	BG_TRANS_CLOSED  = 1,
 
-	PROMPT_COLOR     = Color3.fromRGB(90, 140, 255),   -- accent blue ">"
-	CMD_COLOR        = Color3.fromRGB(100, 185, 255),  -- command name highlight
-	ARG_COLOR        = Color3.fromRGB(200, 200, 220),  -- arg text
-	TEXT_COLOR       = Color3.fromRGB(230, 230, 255),
-	PLACEHOLDER_COLOR= Color3.fromRGB(100, 105, 140),
-	HINT_COLOR       = Color3.fromRGB(85, 90, 125),
+	PROMPT_COLOR     = Color3.fromRGB(255, 210, 0),    -- yellow "›"
+	CMD_COLOR        = Color3.fromRGB(255, 220, 40),   -- command name highlight
+	ARG_COLOR        = Color3.fromRGB(210, 210, 220),  -- arg text
+	TEXT_COLOR       = Color3.fromRGB(240, 240, 255),
+	PLACEHOLDER_COLOR= Color3.fromRGB(90, 90, 105),
+	HINT_COLOR       = Color3.fromRGB(130, 110, 40),
 
 	FONT             = Enum.Font.GothamSemibold,
 	FONT_MONO        = Enum.Font.Code,
@@ -65,11 +66,11 @@ local CFG = {
 
 	-- Autocomplete dropdown
 	AC_MAX_ENTRIES   = 6,
-	AC_ROW_HEIGHT    = 32,
-	AC_BG            = Color3.fromRGB(14, 14, 22),
-	AC_HOVER_BG      = Color3.fromRGB(30, 32, 60),
-	AC_BORDER        = Color3.fromRGB(50, 55, 90),
-	AC_DESC_COLOR    = Color3.fromRGB(130, 135, 170),
+	AC_ROW_HEIGHT    = 34,
+	AC_BG            = Color3.fromRGB(12, 12, 14),
+	AC_HOVER_BG      = Color3.fromRGB(38, 32, 6),
+	AC_BORDER        = Color3.fromRGB(180, 145, 0),
+	AC_DESC_COLOR    = Color3.fromRGB(150, 130, 60),
 
 	-- Animation
 	ANIM_TIME        = 0.18,
@@ -80,16 +81,40 @@ local CFG = {
 	-- Feedback toast
 	TOAST_DURATION   = 3.5,
 	TOAST_FADE       = 0.4,
+
+	-- Player suggestion panel
+	PS_ROW_HEIGHT    = 36,
+	PS_MAX_ENTRIES   = 4,
+	PS_BG            = Color3.fromRGB(10, 10, 12),
+	PS_HOVER_BG      = Color3.fromRGB(38, 32, 6),
+	PS_BORDER        = Color3.fromRGB(180, 145, 0),
+	PS_TEXT_COLOR    = Color3.fromRGB(230, 230, 240),
+
+	-- Right-side notification
+	NOTIF_WIDTH      = 260,
+	NOTIF_HEIGHT     = 52,
+	NOTIF_Y          = 120,
+	NOTIF_DURATION   = 3.0,
+	NOTIF_FADE       = 0.35,
+	NOTIF_SLIDE      = 0.28,
 }
 
 -- ─── State ─────────────────────────────────────────────────────────────────────
 
 local isOpen        = false
-local history       = {}       -- most-recent-first list of submitted commands
-local historyIndex  = 0        -- 0 = not browsing; 1 = most recent, etc.
-local savedDraft    = ""       -- input text saved before browsing history
-local acMatches     = {}       -- current autocomplete matches { name, entry }
-local acIndex       = 1        -- highlighted autocomplete row (1-based)
+local history       = {}
+local historyIndex  = 0
+local savedDraft    = ""
+local acMatches     = {}
+local acIndex       = 1
+
+-- ─── Tween helper ──────────────────────────────────────────────────────────────
+
+local function tw(target, time, props, style, dir)
+	style = style or Enum.EasingStyle.Quint
+	dir   = dir   or Enum.EasingDirection.Out
+	TweenService:Create(target, TweenInfo.new(time, style, dir), props):Play()
+end
 
 -- ─── Build the ScreenGui ───────────────────────────────────────────────────────
 
@@ -121,15 +146,15 @@ panelCorner.Parent = panel
 
 local panelStroke = Instance.new("UIStroke")
 panelStroke.Color        = CFG.BG_BORDER
-panelStroke.Thickness    = 1
+panelStroke.Thickness    = 1.5
 panelStroke.Transparency = 1
 panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 panelStroke.Parent       = panel
 
--- Subtle top gradient line (console accent)
+-- Yellow top accent line
 local accentLine = Instance.new("Frame")
 accentLine.Name                  = "AccentLine"
-accentLine.Size                  = UDim2.new(1, -2, 0, 1)
+accentLine.Size                  = UDim2.new(1, -2, 0, 2)
 accentLine.Position              = UDim2.new(0, 1, 0, 0)
 accentLine.BackgroundColor3      = CFG.PROMPT_COLOR
 accentLine.BackgroundTransparency = 1
@@ -141,15 +166,15 @@ local accentLineCorner = Instance.new("UICorner")
 accentLineCorner.CornerRadius = UDim.new(0, 2)
 accentLineCorner.Parent = accentLine
 
--- ── Prompt symbol ">" ─────────────────────────────────────────────────────────
+-- ── Prompt symbol "›" ─────────────────────────────────────────────────────────
 
 local promptLabel = Instance.new("TextLabel")
 promptLabel.Name                  = "Prompt"
-promptLabel.Size                  = UDim2.new(0, 28, 1, 0)
-promptLabel.Position              = UDim2.new(0, 8, 0, 0)
+promptLabel.Size                  = UDim2.new(0, 32, 1, 0)
+promptLabel.Position              = UDim2.new(0, 10, 0, 0)
 promptLabel.BackgroundTransparency = 1
 promptLabel.Font                  = CFG.FONT
-promptLabel.TextSize              = CFG.TEXT_SIZE
+promptLabel.TextSize              = 18
 promptLabel.TextColor3            = CFG.PROMPT_COLOR
 promptLabel.TextTransparency      = 1
 promptLabel.Text                  = "›"
@@ -162,8 +187,8 @@ promptLabel.Parent                = panel
 
 local inputBox = Instance.new("TextBox")
 inputBox.Name                   = "Input"
-inputBox.Size                   = UDim2.new(1, -42, 1, 0)
-inputBox.Position               = UDim2.new(0, 36, 0, 0)
+inputBox.Size                   = UDim2.new(1, -48, 1, 0)
+inputBox.Position               = UDim2.new(0, 42, 0, 0)
 inputBox.BackgroundTransparency = 1
 inputBox.BorderSizePixel        = 0
 inputBox.ClearTextOnFocus       = false
@@ -180,12 +205,12 @@ inputBox.MultiLine              = false
 inputBox.ZIndex                 = 3
 inputBox.Parent                 = panel
 
--- ── Arg hint label (shown below panel, inside a sub-frame) ────────────────────
+-- ── Arg hint label ────────────────────────────────────────────────────────────
 
 local hintFrame = Instance.new("Frame")
 hintFrame.Name                  = "HintFrame"
 hintFrame.Size                  = UDim2.new(1, 0, 0, 20)
-hintFrame.Position              = UDim2.new(0, 0, 1, 4)
+hintFrame.Position              = UDim2.new(0, 0, 1, 5)
 hintFrame.BackgroundTransparency = 1
 hintFrame.BorderSizePixel       = 0
 hintFrame.Visible               = false
@@ -194,8 +219,8 @@ hintFrame.Parent                = panel
 
 local hintLabel = Instance.new("TextLabel")
 hintLabel.Name                  = "Hint"
-hintLabel.Size                  = UDim2.new(1, -36, 1, 0)
-hintLabel.Position              = UDim2.new(0, 36, 0, 0)
+hintLabel.Size                  = UDim2.new(1, -42, 1, 0)
+hintLabel.Position              = UDim2.new(0, 42, 0, 0)
 hintLabel.BackgroundTransparency = 1
 hintLabel.Font                  = Enum.Font.Gotham
 hintLabel.TextSize              = CFG.HINT_SIZE
@@ -213,7 +238,7 @@ local dropdown = Instance.new("Frame")
 dropdown.Name                  = "Autocomplete"
 dropdown.AnchorPoint           = Vector2.new(0, 0)
 dropdown.BackgroundColor3      = CFG.AC_BG
-dropdown.BackgroundTransparency = 0.06
+dropdown.BackgroundTransparency = 0.04
 dropdown.BorderSizePixel       = 0
 dropdown.Size                  = UDim2.new(1, 0, 0, 0)
 dropdown.Position              = UDim2.new(0, 0, 1, 10)
@@ -229,7 +254,7 @@ dropdownCorner.Parent = dropdown
 local dropdownStroke = Instance.new("UIStroke")
 dropdownStroke.Color        = CFG.AC_BORDER
 dropdownStroke.Thickness    = 1
-dropdownStroke.Transparency = 0.4
+dropdownStroke.Transparency = 0.3
 dropdownStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 dropdownStroke.Parent       = dropdown
 
@@ -239,7 +264,127 @@ dropdownLayout.SortOrder        = Enum.SortOrder.LayoutOrder
 dropdownLayout.Padding          = UDim.new(0, 0)
 dropdownLayout.Parent           = dropdown
 
--- Click-outside detector (full-screen transparent frame behind everything)
+-- ── Player suggestion panel (UI-only — no logic yet) ──────────────────────────
+
+local playerSuggestPanel = Instance.new("Frame")
+playerSuggestPanel.Name                  = "PlayerSuggestions"
+playerSuggestPanel.AnchorPoint           = Vector2.new(0.5, 0)
+playerSuggestPanel.Size                  = UDim2.new(0, CFG.BAR_WIDTH, 0, CFG.PS_ROW_HEIGHT * CFG.PS_MAX_ENTRIES)
+playerSuggestPanel.Position              = UDim2.new(0.5, 0, 1, 10)
+playerSuggestPanel.BackgroundColor3      = CFG.PS_BG
+playerSuggestPanel.BackgroundTransparency = 0.04
+playerSuggestPanel.BorderSizePixel       = 0
+playerSuggestPanel.Visible               = false
+playerSuggestPanel.ClipsDescendants      = true
+playerSuggestPanel.ZIndex                = 9
+playerSuggestPanel.Parent                = panel
+
+local pspCorner = Instance.new("UICorner")
+pspCorner.CornerRadius = UDim.new(0, CFG.BAR_CORNER)
+pspCorner.Parent = playerSuggestPanel
+
+local pspStroke = Instance.new("UIStroke")
+pspStroke.Color        = CFG.PS_BORDER
+pspStroke.Thickness    = 1
+pspStroke.Transparency = 0.3
+pspStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+pspStroke.Parent = playerSuggestPanel
+
+local pspLayout = Instance.new("UIListLayout")
+pspLayout.FillDirection = Enum.FillDirection.Vertical
+pspLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+pspLayout.Padding       = UDim.new(0, 0)
+pspLayout.Parent        = playerSuggestPanel
+
+-- Scrolling frame inside for future use
+local pspScroll = Instance.new("ScrollingFrame")
+pspScroll.Size                  = UDim2.new(1, 0, 1, 0)
+pspScroll.BackgroundTransparency = 1
+pspScroll.BorderSizePixel       = 0
+pspScroll.ScrollBarThickness    = 3
+pspScroll.ScrollBarImageColor3  = CFG.PROMPT_COLOR
+pspScroll.CanvasSize            = UDim2.new(0, 0, 0, CFG.PS_ROW_HEIGHT * CFG.PS_MAX_ENTRIES)
+pspScroll.ZIndex                = 10
+pspScroll.Parent                = playerSuggestPanel
+
+local pspScrollLayout = Instance.new("UIListLayout")
+pspScrollLayout.FillDirection = Enum.FillDirection.Vertical
+pspScrollLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+pspScrollLayout.Padding       = UDim.new(0, 0)
+pspScrollLayout.Parent        = pspScroll
+
+-- Placeholder player entries
+local placeholderPlayers = { "John", "James", "Jordan", "Jane" }
+for i, name in placeholderPlayers do
+	local row = Instance.new("Frame")
+	row.Name                  = "PlayerRow" .. i
+	row.LayoutOrder           = i
+	row.Size                  = UDim2.new(1, 0, 0, CFG.PS_ROW_HEIGHT)
+	row.BackgroundColor3      = CFG.PS_HOVER_BG
+	row.BackgroundTransparency = 1
+	row.BorderSizePixel       = 0
+	row.ZIndex                = 10
+	row.Parent                = pspScroll
+
+	local playerIcon = Instance.new("TextLabel")
+	playerIcon.Size                  = UDim2.new(0, 36, 1, 0)
+	playerIcon.Position              = UDim2.new(0, 0, 0, 0)
+	playerIcon.BackgroundTransparency = 1
+	playerIcon.Font                  = CFG.FONT
+	playerIcon.TextSize              = 14
+	playerIcon.TextColor3            = CFG.PROMPT_COLOR
+	playerIcon.TextTransparency      = 0
+	playerIcon.Text                  = "⬡"
+	playerIcon.TextXAlignment        = Enum.TextXAlignment.Center
+	playerIcon.TextYAlignment        = Enum.TextYAlignment.Center
+	playerIcon.ZIndex                = 11
+	playerIcon.Parent                = row
+
+	local playerName = Instance.new("TextLabel")
+	playerName.Size                  = UDim2.new(1, -44, 1, 0)
+	playerName.Position              = UDim2.new(0, 44, 0, 0)
+	playerName.BackgroundTransparency = 1
+	playerName.Font                  = CFG.FONT
+	playerName.TextSize              = CFG.TEXT_SIZE - 1
+	playerName.TextColor3            = CFG.PS_TEXT_COLOR
+	playerName.TextXAlignment        = Enum.TextXAlignment.Left
+	playerName.TextYAlignment        = Enum.TextYAlignment.Center
+	playerName.Text                  = name
+	playerName.ZIndex                = 11
+	playerName.Parent                = row
+
+	-- Divider
+	if i < #placeholderPlayers then
+		local div = Instance.new("Frame")
+		div.Size                  = UDim2.new(1, -44, 0, 1)
+		div.Position              = UDim2.new(0, 44, 1, -1)
+		div.BackgroundColor3      = CFG.PS_BORDER
+		div.BackgroundTransparency = 0.6
+		div.BorderSizePixel       = 0
+		div.ZIndex                = 11
+		div.Parent                = row
+	end
+
+	-- Hover effect (UI-only)
+	local hitBtn = Instance.new("TextButton")
+	hitBtn.Size                   = UDim2.new(1, 0, 1, 0)
+	hitBtn.BackgroundTransparency = 1
+	hitBtn.Text                   = ""
+	hitBtn.ZIndex                 = 12
+	hitBtn.Parent                 = row
+
+	hitBtn.MouseEnter:Connect(function()
+		tw(row, 0.08, { BackgroundTransparency = 0.55 })
+		tw(playerName, 0.08, { TextColor3 = CFG.PROMPT_COLOR })
+	end)
+	hitBtn.MouseLeave:Connect(function()
+		tw(row, 0.08, { BackgroundTransparency = 1 })
+		tw(playerName, 0.08, { TextColor3 = CFG.PS_TEXT_COLOR })
+	end)
+end
+
+-- ── Click-outside blocker ──────────────────────────────────────────────────────
+
 local blocker = Instance.new("ImageButton")
 blocker.Name                   = "Blocker"
 blocker.Size                   = UDim2.new(1, 0, 1, 0)
@@ -249,17 +394,113 @@ blocker.ZIndex                 = 2
 blocker.Visible                = false
 blocker.Parent                 = gui
 
--- ─── Tween helpers ─────────────────────────────────────────────────────────────
+-- ─── Right-side command notification (UI + animation only) ─────────────────────
 
-local function tw(target, time, props, style, dir)
-	style = style or Enum.EasingStyle.Quint
-	dir   = dir   or Enum.EasingDirection.Out
-	TweenService:Create(target, TweenInfo.new(time, style, dir), props):Play()
+local notifGui = Instance.new("ScreenGui")
+notifGui.Name           = "CmdNotification"
+notifGui.DisplayOrder   = 56
+notifGui.ResetOnSpawn   = false
+notifGui.IgnoreGuiInset = true
+notifGui.Parent         = PlayerGui
+
+local notifFrame = Instance.new("Frame")
+notifFrame.Name                  = "NotifFrame"
+notifFrame.AnchorPoint           = Vector2.new(1, 0)
+notifFrame.Size                  = UDim2.new(0, CFG.NOTIF_WIDTH, 0, CFG.NOTIF_HEIGHT)
+notifFrame.Position              = UDim2.new(1, CFG.NOTIF_WIDTH + 16, 0, CFG.NOTIF_Y)
+notifFrame.BackgroundColor3      = Color3.fromRGB(10, 10, 12)
+notifFrame.BackgroundTransparency = 0.08
+notifFrame.BorderSizePixel       = 0
+notifFrame.Visible               = false
+notifFrame.ZIndex                = 20
+notifFrame.Parent                = notifGui
+
+local notifCorner = Instance.new("UICorner")
+notifCorner.CornerRadius = UDim.new(0, 10)
+notifCorner.Parent = notifFrame
+
+local notifStroke = Instance.new("UIStroke")
+notifStroke.Color        = CFG.BG_BORDER
+notifStroke.Thickness    = 1.5
+notifStroke.Transparency = 0.2
+notifStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+notifStroke.Parent = notifFrame
+
+-- Yellow left accent bar
+local notifAccent = Instance.new("Frame")
+notifAccent.Name                  = "Accent"
+notifAccent.Size                  = UDim2.new(0, 3, 1, -12)
+notifAccent.Position              = UDim2.new(0, 6, 0, 6)
+notifAccent.BackgroundColor3      = CFG.PROMPT_COLOR
+notifAccent.BackgroundTransparency = 0
+notifAccent.BorderSizePixel       = 0
+notifAccent.ZIndex                = 21
+notifAccent.Parent                = notifFrame
+
+local notifAccentCorner = Instance.new("UICorner")
+notifAccentCorner.CornerRadius = UDim.new(0, 2)
+notifAccentCorner.Parent = notifAccent
+
+-- Icon label
+local notifIcon = Instance.new("TextLabel")
+notifIcon.Name                  = "Icon"
+notifIcon.Size                  = UDim2.new(0, 32, 1, 0)
+notifIcon.Position              = UDim2.new(0, 16, 0, 0)
+notifIcon.BackgroundTransparency = 1
+notifIcon.Font                  = Enum.Font.GothamBold
+notifIcon.TextSize              = 18
+notifIcon.TextColor3            = CFG.PROMPT_COLOR
+notifIcon.TextXAlignment        = Enum.TextXAlignment.Center
+notifIcon.TextYAlignment        = Enum.TextYAlignment.Center
+notifIcon.Text                  = "✓"
+notifIcon.ZIndex                = 21
+notifIcon.Parent                = notifFrame
+
+-- Message label
+local notifLabel = Instance.new("TextLabel")
+notifLabel.Name                  = "Label"
+notifLabel.Size                  = UDim2.new(1, -56, 1, 0)
+notifLabel.Position              = UDim2.new(0, 50, 0, 0)
+notifLabel.BackgroundTransparency = 1
+notifLabel.Font                  = CFG.FONT
+notifLabel.TextSize              = 13
+notifLabel.TextColor3            = Color3.fromRGB(220, 220, 235)
+notifLabel.TextXAlignment        = Enum.TextXAlignment.Left
+notifLabel.TextYAlignment        = Enum.TextYAlignment.Center
+notifLabel.TextTruncate          = Enum.TextTruncate.AtEnd
+notifLabel.Text                  = "Command Executed"
+notifLabel.ZIndex                = 21
+notifLabel.Parent                = notifFrame
+
+-- Notification slide-in/out function
+local notifActive = false
+local function showNotification(message: string)
+	notifLabel.Text   = message
+	notifFrame.Visible = true
+	notifActive = true
+
+	-- Slide in from right
+	notifFrame.Position = UDim2.new(1, 16, 0, CFG.NOTIF_Y)
+	tw(notifFrame, CFG.NOTIF_SLIDE, {
+		Position = UDim2.new(1, -(CFG.NOTIF_WIDTH + 16), 0, CFG.NOTIF_Y),
+	})
+
+	task.delay(CFG.NOTIF_DURATION, function()
+		if not notifActive then return end
+		-- Slide back out to the right
+		tw(notifFrame, CFG.NOTIF_SLIDE, {
+			Position = UDim2.new(1, 16, 0, CFG.NOTIF_Y),
+		}, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		task.delay(CFG.NOTIF_SLIDE, function()
+			notifFrame.Visible = false
+			notifActive = false
+		end)
+	end)
 end
 
--- ─── Autocomplete rendering ────────────────────────────────────────────────────
+-- ─── Autocomplete rows (reusable) ─────────────────────────────────────────────
 
-local acRows = {}  -- reusable row frames
+local acRows = {}
 
 local function clearDropdown()
 	for _, row in acRows do
@@ -282,10 +523,8 @@ local function buildDropdownRow(index: number): Frame
 	row.Parent                = dropdown
 
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft   = UDim.new(0, 36)
+	pad.PaddingLeft   = UDim.new(0, 42)
 	pad.PaddingRight  = UDim.new(0, 12)
-	pad.PaddingTop    = UDim.new(0, 0)
-	pad.PaddingBottom = UDim.new(0, 0)
 	pad.Parent = row
 
 	local nameLabel = Instance.new("TextLabel")
@@ -316,18 +555,16 @@ local function buildDropdownRow(index: number): Frame
 	descLabel.ZIndex                = 11
 	descLabel.Parent                = row
 
-	-- Divider at bottom of row
 	local divider = Instance.new("Frame")
 	divider.Name                  = "Divider"
-	divider.Size                  = UDim2.new(1, -36, 0, 1)
+	divider.Size                  = UDim2.new(1, -42, 0, 1)
 	divider.Position              = UDim2.new(0, 0, 1, -1)
 	divider.BackgroundColor3      = CFG.AC_BORDER
-	divider.BackgroundTransparency = 0.6
+	divider.BackgroundTransparency = 0.5
 	divider.BorderSizePixel       = 0
 	divider.ZIndex                = 11
 	divider.Parent                = row
 
-	-- Click handler
 	local btn = Instance.new("TextButton")
 	btn.Name                   = "HitBtn"
 	btn.Size                   = UDim2.new(1, 0, 1, 0)
@@ -340,14 +577,22 @@ local function buildDropdownRow(index: number): Frame
 		if acMatches[index] then
 			inputBox.Text = acMatches[index].name .. " "
 			inputBox:CaptureFocus()
-			-- Move cursor to end
-			inputBox.CursorPosition = #inputBox.Text + 1
+			task.defer(function()
+				inputBox.CursorPosition = #inputBox.Text + 1
+			end)
 		end
 	end)
 
 	btn.MouseEnter:Connect(function()
 		acIndex = index
-		refreshDropdown()
+		-- Refresh highlights without a full rebuild
+		for i, r in acRows do
+			if r and r.Visible then
+				tw(r, 0.06, { BackgroundTransparency = (i == acIndex) and 0.55 or 1 })
+				local nl = r:FindFirstChild("CmdName")
+				if nl then nl.TextColor3 = (i == acIndex) and Color3.fromRGB(255, 235, 80) or CFG.CMD_COLOR end
+			end
+		end
 	end)
 
 	acRows[index] = row
@@ -359,7 +604,7 @@ function refreshDropdown()
 
 	local count = math.min(#acMatches, CFG.AC_MAX_ENTRIES)
 	if count == 0 then
-		dropdown.Visible = false
+		dropdown.Visible  = false
 		hintFrame.Visible = false
 		return
 	end
@@ -372,42 +617,36 @@ function refreshDropdown()
 		local row   = buildDropdownRow(i)
 		row.Visible  = true
 
-		local nameL = row:FindFirstChild("CmdName")
-		local descL = row:FindFirstChild("Desc")
+		local nameL      = row:FindFirstChild("CmdName")
+		local descL      = row:FindFirstChild("Desc")
 		local isSelected = (i == acIndex)
 
-		-- Highlight the selected row
-		tw(row, 0.08, {
-			BackgroundTransparency = isSelected and 0.55 or 1,
-		})
+		tw(row, 0.08, { BackgroundTransparency = isSelected and 0.55 or 1 })
 
-		-- Colour the command name (bold accent on hover)
 		if nameL then
-			nameL.TextColor3 = isSelected and Color3.fromRGB(150, 210, 255) or CFG.CMD_COLOR
+			nameL.TextColor3 = isSelected and Color3.fromRGB(255, 235, 80) or CFG.CMD_COLOR
 			nameL.Text       = match.name
 		end
 		if descL then
 			descL.Text = match.entry.description
 		end
 
-		-- Hide last row divider
 		local div = row:FindFirstChild("Divider")
 		if div then div.Visible = (i ~= count) end
 	end
 
-	-- Update arg hint for selected match
+	-- Update arg hint
 	local selected = acMatches[acIndex]
 	if selected and #selected.entry.args > 0 then
 		local parts = {}
-		table.insert(parts, '<font color="#5A8CFF">' .. selected.entry.name .. "</font>")
+		table.insert(parts, '<font color="#FFD700">' .. selected.entry.name .. "</font>")
 		for _, arg in selected.entry.args do
 			local isOptional = arg:sub(-1) == "?"
 			local label = isOptional and arg:sub(1, -2) or arg
-			local color = isOptional and "#555870" or "#888aaa"
+			local color = isOptional and "#806010" or "#a09050"
 			local wrap  = isOptional and "[" or "<"
 			local wrapE = isOptional and "]" or ">"
-			table.insert(parts,
-				'<font color="' .. color .. '">' .. wrap .. label .. wrapE .. "</font>")
+			table.insert(parts, '<font color="' .. color .. '">' .. wrap .. label .. wrapE .. "</font>")
 		end
 		hintLabel.Text    = table.concat(parts, "  ")
 		hintFrame.Visible = true
@@ -416,18 +655,15 @@ function refreshDropdown()
 	end
 end
 
--- ─── Autocomplete update (called whenever input changes) ─────────────────────
+-- ─── Autocomplete update ───────────────────────────────────────────────────────
 
 local function updateAutocomplete()
-	local text  = inputBox.Text
+	local text   = inputBox.Text
 	local tokens = CommandRegistry.parseArgs(text)
 	local query  = tokens[1] or ""
 
-	-- Only show autocomplete when the user hasn't finished typing the command
-	-- (i.e., no space after the first token yet, or text is empty)
 	local hasSpace = text:find("%s")
 	if hasSpace then
-		-- Command already chosen — update hint for chosen command only
 		local chosen = CommandRegistry.COMMANDS[query:lower()]
 		if chosen then
 			acMatches = { { name = query:lower(), entry = chosen } }
@@ -438,19 +674,17 @@ local function updateAutocomplete()
 		clearDropdown()
 		dropdown.Visible = false
 
-		-- Still show arg hint
 		if chosen and #chosen.args > 0 then
 			local parts = {}
 			for _, arg in chosen.args do
 				local isOptional = arg:sub(-1) == "?"
 				local label = isOptional and arg:sub(1, -2) or arg
-				local color = isOptional and "#555870" or "#888aaa"
+				local color = isOptional and "#806010" or "#a09050"
 				local wrap  = isOptional and "[" or "<"
 				local wrapE = isOptional and "]" or ">"
-				table.insert(parts,
-					'<font color="' .. color .. '">' .. wrap .. label .. wrapE .. "</font>")
+				table.insert(parts, '<font color="' .. color .. '">' .. wrap .. label .. wrapE .. "</font>")
 			end
-			hintLabel.Text    = '<font color="#5A8CFF">' .. query:lower() .. "</font>  " .. table.concat(parts, "  ")
+			hintLabel.Text    = '<font color="#FFD700">' .. query:lower() .. "</font>  " .. table.concat(parts, "  ")
 			hintFrame.Visible = true
 		else
 			hintFrame.Visible = false
@@ -469,7 +703,7 @@ local function updateAutocomplete()
 	refreshDropdown()
 end
 
--- ─── Open / Close logic ────────────────────────────────────────────────────────
+-- ─── Open / Close ─────────────────────────────────────────────────────────────
 
 local openTInfo  = TweenInfo.new(CFG.ANIM_TIME, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local closeTInfo = TweenInfo.new(CFG.ANIM_TIME, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
@@ -480,11 +714,10 @@ local function openBar()
 	historyIndex = 0
 	savedDraft   = ""
 
-	panel.Visible = true
+	panel.Visible   = true
 	blocker.Visible = true
 
-	-- Reset position to slightly above for slide-in effect
-	panel.Position = UDim2.new(0.5, 0, 0, CFG.BAR_Y_CLOSED)
+	panel.Position              = UDim2.new(0.5, 0, 0, CFG.BAR_Y_CLOSED)
 	panel.BackgroundTransparency = 1
 
 	TweenService:Create(panel, openTInfo, {
@@ -492,15 +725,20 @@ local function openBar()
 		BackgroundTransparency = CFG.BG_TRANS_OPEN,
 	}):Play()
 
-	tw(panelStroke, CFG.ANIM_TIME, { Transparency = 0.15 })
-	tw(accentLine,  CFG.ANIM_TIME, { BackgroundTransparency = 0.3 })
+	tw(panelStroke, CFG.ANIM_TIME, { Transparency = 0.1 })
+	tw(accentLine,  CFG.ANIM_TIME, { BackgroundTransparency = 0.2 })
 	tw(promptLabel, CFG.ANIM_TIME, { TextTransparency = 0 })
 	tw(inputBox,    CFG.ANIM_TIME, { TextTransparency = 0 })
 
-	task.delay(CFG.ANIM_TIME * 0.5, function()
+	-- Show player suggestion panel after bar opens (UI-only)
+	task.delay(CFG.ANIM_TIME, function()
 		if isOpen then
-			inputBox:CaptureFocus()
+			playerSuggestPanel.Visible = true
 		end
+	end)
+
+	task.delay(CFG.ANIM_TIME * 0.5, function()
+		if isOpen then inputBox:CaptureFocus() end
 	end)
 end
 
@@ -509,9 +747,10 @@ local function closeBar()
 	isOpen = false
 	historyIndex = 0
 
-	dropdown.Visible  = false
-	hintFrame.Visible = false
-	blocker.Visible   = false
+	dropdown.Visible          = false
+	hintFrame.Visible         = false
+	blocker.Visible           = false
+	playerSuggestPanel.Visible = false
 
 	TweenService:Create(panel, closeTInfo, {
 		Position             = UDim2.new(0.5, 0, 0, CFG.BAR_Y_CLOSED),
@@ -525,9 +764,9 @@ local function closeBar()
 
 	task.delay(CFG.ANIM_TIME, function()
 		if not isOpen then
-			panel.Visible   = false
-			inputBox.Text   = ""
-			acMatches       = {}
+			panel.Visible = false
+			inputBox.Text = ""
+			acMatches     = {}
 		end
 	end)
 
@@ -537,20 +776,19 @@ end
 -- ─── Command execution ─────────────────────────────────────────────────────────
 
 local function executeCommand()
-	local raw    = inputBox.Text:match("^%s*(.-)%s*$")
+	local raw = inputBox.Text:match("^%s*(.-)%s*$")
 	if raw == "" then
 		closeBar()
 		return
 	end
 
-	local tokens = CommandRegistry.parseArgs(raw)
+	local tokens  = CommandRegistry.parseArgs(raw)
 	local cmdName = tokens[1] and tokens[1]:lower() or ""
 	local args    = {}
 	for i = 2, #tokens do
 		table.insert(args, tokens[i])
 	end
 
-	-- Save to history (deduplicate immediately adjacent)
 	if history[1] ~= raw then
 		table.insert(history, 1, raw)
 		if #history > CFG.HISTORY_MAX then
@@ -558,8 +796,10 @@ local function executeCommand()
 		end
 	end
 
-	-- Fire to server
 	CommandRemotes.CommandExecuted:FireServer(cmdName, args)
+
+	-- Show right-side notification (UI-only animation)
+	showNotification("Command Executed")
 
 	closeBar()
 end
@@ -573,84 +813,98 @@ toastGui.ResetOnSpawn   = false
 toastGui.IgnoreGuiInset = true
 toastGui.Parent         = PlayerGui
 
-local toastContainer = Instance.new("Frame")
-toastContainer.Name                  = "Container"
-toastContainer.AnchorPoint           = Vector2.new(1, 1)
-toastContainer.Size                  = UDim2.new(0, 340, 1, -20)
-toastContainer.Position              = UDim2.new(1, -16, 1, -20)
-toastContainer.BackgroundTransparency = 1
-toastContainer.Parent                = toastGui
+local toastHolder = Instance.new("Frame")
+toastHolder.Name                  = "ToastHolder"
+toastHolder.AnchorPoint           = Vector2.new(1, 1)
+toastHolder.Size                  = UDim2.new(0, 320, 1, -20)
+toastHolder.Position              = UDim2.new(1, -16, 1, -16)
+toastHolder.BackgroundTransparency = 1
+toastHolder.BorderSizePixel       = 0
+toastHolder.Parent                = toastGui
 
 local toastLayout = Instance.new("UIListLayout")
-toastLayout.FillDirection    = Enum.FillDirection.Vertical
-toastLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-toastLayout.SortOrder        = Enum.SortOrder.LayoutOrder
-toastLayout.Padding          = UDim.new(0, 6)
-toastLayout.Parent           = toastContainer
+toastLayout.FillDirection       = Enum.FillDirection.Vertical
+toastLayout.VerticalAlignment   = Enum.VerticalAlignment.Bottom
+toastLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+toastLayout.Padding             = UDim.new(0, 6)
+toastLayout.Parent              = toastHolder
 
-local toastOrder = 0
+local toastCounter = 0
 
 local function showToast(success: boolean, message: string)
-	toastOrder += 1
-	local order = toastOrder
+	toastCounter += 1
 
 	local toast = Instance.new("Frame")
-	toast.LayoutOrder           = order
-	toast.Size                  = UDim2.new(1, 0, 0, 42)
-	toast.BackgroundColor3      = success
-		and Color3.fromRGB(18, 42, 28)
-		or  Color3.fromRGB(42, 14, 14)
-	toast.BackgroundTransparency = 1
-	toast.BorderSizePixel        = 0
-	toast.Parent                 = toastContainer
+	toast.Name                  = "Toast" .. toastCounter
+	toast.LayoutOrder           = -toastCounter
+	toast.Size                  = UDim2.new(1, 0, 0, 44)
+	toast.BackgroundColor3      = Color3.fromRGB(10, 10, 12)
+	toast.BackgroundTransparency = 0.1
+	toast.BorderSizePixel       = 0
+	toast.ZIndex                = 30
+	toast.Parent                = toastHolder
 
 	local tc = Instance.new("UICorner")
-	tc.CornerRadius = UDim.new(0, 6)
+	tc.CornerRadius = UDim.new(0, 8)
 	tc.Parent = toast
 
 	local ts = Instance.new("UIStroke")
-	ts.Color        = success and Color3.fromRGB(40, 160, 80) or Color3.fromRGB(180, 50, 50)
+	ts.Color        = success and CFG.BG_BORDER or Color3.fromRGB(180, 50, 50)
 	ts.Thickness    = 1
-	ts.Transparency = 0.5
+	ts.Transparency = 0.3
 	ts.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	ts.Parent       = toast
+	ts.Parent = toast
+
+	-- Left accent bar
+	local tAccent = Instance.new("Frame")
+	tAccent.Size                  = UDim2.new(0, 3, 1, -10)
+	tAccent.Position              = UDim2.new(0, 5, 0, 5)
+	tAccent.BackgroundColor3      = success and CFG.PROMPT_COLOR or Color3.fromRGB(220, 60, 60)
+	tAccent.BackgroundTransparency = 1
+	tAccent.BorderSizePixel       = 0
+	tAccent.ZIndex                = 31
+	tAccent.Parent                = toast
+	Instance.new("UICorner", tAccent).CornerRadius = UDim.new(0, 2)
 
 	local icon = Instance.new("TextLabel")
 	icon.Size                  = UDim2.new(0, 32, 1, 0)
-	icon.Position              = UDim2.new(0, 0, 0, 0)
+	icon.Position              = UDim2.new(0, 14, 0, 0)
 	icon.BackgroundTransparency = 1
 	icon.Font                  = Enum.Font.GothamBold
-	icon.TextSize              = 14
-	icon.TextColor3            = success
-		and Color3.fromRGB(60, 200, 100)
-		or  Color3.fromRGB(220, 70, 70)
-	icon.Text                  = success and "✓" or "✕"
+	icon.TextSize              = 16
+	icon.TextColor3            = success and CFG.PROMPT_COLOR or Color3.fromRGB(220, 80, 80)
 	icon.TextTransparency      = 1
+	icon.Text                  = success and "✓" or "✕"
+	icon.TextXAlignment        = Enum.TextXAlignment.Center
+	icon.TextYAlignment        = Enum.TextYAlignment.Center
+	icon.ZIndex                = 31
 	icon.Parent                = toast
 
 	local lbl = Instance.new("TextLabel")
-	lbl.Size                  = UDim2.new(1, -36, 1, 0)
-	lbl.Position              = UDim2.new(0, 36, 0, 0)
+	lbl.Size                  = UDim2.new(1, -52, 1, 0)
+	lbl.Position              = UDim2.new(0, 48, 0, 0)
 	lbl.BackgroundTransparency = 1
 	lbl.Font                  = Enum.Font.Gotham
 	lbl.TextSize              = 13
-	lbl.TextColor3            = Color3.fromRGB(210, 215, 230)
+	lbl.TextColor3            = Color3.fromRGB(220, 220, 235)
+	lbl.TextTransparency      = 1
+	lbl.TextWrapped           = true
 	lbl.TextXAlignment        = Enum.TextXAlignment.Left
 	lbl.TextYAlignment        = Enum.TextYAlignment.Center
-	lbl.TextWrapped           = true
-	lbl.TextTransparency      = 1
 	lbl.Text                  = message
+	lbl.ZIndex                = 31
 	lbl.Parent                = toast
 
 	task.spawn(function()
-		local fadeIn = TweenInfo.new(CFG.TOAST_FADE, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-		tw(toast, CFG.TOAST_FADE, { BackgroundTransparency = 0.15 })
-		tw(icon,  CFG.TOAST_FADE, { TextTransparency = 0 })
-		tw(lbl,   CFG.TOAST_FADE, { TextTransparency = 0 })
+		tw(toast,   CFG.TOAST_FADE, { BackgroundTransparency = 0.1 })
+		tw(tAccent, CFG.TOAST_FADE, { BackgroundTransparency = 0 })
+		tw(icon,    CFG.TOAST_FADE, { TextTransparency = 0 })
+		tw(lbl,     CFG.TOAST_FADE, { TextTransparency = 0 })
 		task.wait(CFG.TOAST_DURATION)
-		tw(toast, CFG.TOAST_FADE, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-		tw(icon,  CFG.TOAST_FADE, { TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-		tw(lbl,   CFG.TOAST_FADE, { TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		tw(toast,   CFG.TOAST_FADE, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		tw(tAccent, CFG.TOAST_FADE, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		tw(icon,    CFG.TOAST_FADE, { TextTransparency = 1 },       Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		tw(lbl,     CFG.TOAST_FADE, { TextTransparency = 1 },       Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 		task.wait(CFG.TOAST_FADE)
 		toast:Destroy()
 	end)
@@ -662,7 +916,6 @@ end)
 
 -- ─── Input event handling ──────────────────────────────────────────────────────
 
--- Track whether the TextBox is currently focused so we can intercept keys
 local inputFocused = false
 
 inputBox.Focused:Connect(function()
@@ -682,14 +935,11 @@ inputBox:GetPropertyChangedSignal("Text"):Connect(function()
 	end
 end)
 
--- Click outside = close
 blocker.MouseButton1Click:Connect(function()
 	closeBar()
 end)
 
--- Keyboard handling
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	-- Open key (works even when game has processed input, unless in another textbox)
 	if input.KeyCode == CFG.OPEN_KEY and not gameProcessed then
 		if isOpen then
 			closeBar()
@@ -701,7 +951,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	if not isOpen then return end
 
-	-- Keys that work while bar is open
 	if input.KeyCode == Enum.KeyCode.Escape then
 		closeBar()
 		return
@@ -711,15 +960,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	-- History navigation
 	if input.KeyCode == Enum.KeyCode.Up then
-		if historyIndex == 0 then
-			savedDraft = inputBox.Text
-		end
+		if historyIndex == 0 then savedDraft = inputBox.Text end
 		historyIndex = math.min(historyIndex + 1, #history)
 		if history[historyIndex] then
 			inputBox.Text = history[historyIndex]
-			task.defer(function()
-				inputBox.CursorPosition = #inputBox.Text + 1
-			end)
+			task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
 		end
 		return
 	end
@@ -727,33 +972,25 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == Enum.KeyCode.Down then
 		if historyIndex > 0 then
 			historyIndex -= 1
-			if historyIndex == 0 then
-				inputBox.Text = savedDraft
-			else
-				inputBox.Text = history[historyIndex]
-			end
-			task.defer(function()
-				inputBox.CursorPosition = #inputBox.Text + 1
-			end)
+			inputBox.Text = historyIndex == 0 and savedDraft or history[historyIndex]
+			task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
 		end
 		return
 	end
 
-	-- Autocomplete navigation
+	-- Autocomplete accept
 	if input.KeyCode == Enum.KeyCode.Tab then
 		if #acMatches > 0 then
 			local match = acMatches[acIndex] or acMatches[1]
 			if match then
 				inputBox.Text = match.name .. " "
-				task.defer(function()
-					inputBox.CursorPosition = #inputBox.Text + 1
-				end)
+				task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
 			end
 		end
 		return
 	end
 
-	-- Cycle dropdown with Ctrl+N / Ctrl+P (optional bonus)
+	-- Cycle dropdown Ctrl+N / Ctrl+P
 	if input.KeyCode == Enum.KeyCode.N
 		and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
 		if #acMatches > 0 then
