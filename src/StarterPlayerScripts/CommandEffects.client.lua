@@ -2,11 +2,9 @@
         CommandEffects.client.lua
         LocalScript — StarterPlayerScripts
 
-        Handles SM and IM message display:
-          • SM — large white serif text, 20% down, dark vignette edges, blur background
-          • IM — same position but smaller, lighter vignette, less blur
-          • Both fade in smoothly and fade out after duration
-          • No solid black box behind the text — only edge-to-center vignette
+        SM — "[ Server Message ]" header + message, centered 20% down
+        IM — message only, centered 20% below screen centre (70% down)
+        Both use edge-darkening vignette + background blur, fade in/out.
 --]]
 
 local Players           = game:GetService("Players")
@@ -34,191 +32,276 @@ gui.ResetOnSpawn    = false
 gui.IgnoreGuiInset  = true
 gui.Parent          = PlayerGui
 
--- ─── Background blur (blurs the 3D world; UI stays sharp) ─────────────────────
+-- ─── Background blur ───────────────────────────────────────────────────────────
 local blurEffect = Instance.new("BlurEffect")
 blurEffect.Size   = 0
 blurEffect.Parent = Lighting
 
--- ─── Vignette (CanvasGroup lets us tween the whole group opacity) ──────────────
--- Dark edges that fade to transparent in the center — no box, just edge darkening.
+-- ─── Vignette ──────────────────────────────────────────────────────────────────
+-- Starts hidden (Visible=false). Set Visible=true only while a message shows.
 
 local vigCanvas = Instance.new("CanvasGroup")
 vigCanvas.Name                 = "Vignette"
 vigCanvas.Size                 = UDim2.new(1, 0, 1, 0)
 vigCanvas.Position             = UDim2.new(0, 0, 0, 0)
 vigCanvas.BackgroundTransparency = 1
-vigCanvas.GroupTransparency    = 1          -- starts invisible
+vigCanvas.GroupTransparency    = 1
+vigCanvas.Visible              = false          -- hidden on spawn
 vigCanvas.ZIndex               = 5
 vigCanvas.Parent               = gui
 
-local function makeVigFrame(size, position, anchorPoint, gradientRotation)
+local function makeVigFrame(size, position, anchor, rot)
         local f = Instance.new("Frame")
         f.Size                   = size
         f.Position               = position
-        f.AnchorPoint            = anchorPoint
+        f.AnchorPoint            = anchor
         f.BackgroundColor3       = Color3.fromRGB(0, 0, 0)
         f.BackgroundTransparency = 0
         f.BorderSizePixel        = 0
         f.Parent                 = vigCanvas
-
         local g = Instance.new("UIGradient")
         g.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0),   -- opaque at edge
+                NumberSequenceKeypoint.new(0,   0),
                 NumberSequenceKeypoint.new(0.6, 0.7),
-                NumberSequenceKeypoint.new(1, 1),   -- transparent at center
+                NumberSequenceKeypoint.new(1,   1),
         })
-        g.Rotation = gradientRotation
+        g.Rotation = rot
         g.Parent   = f
 end
 
--- Top edge: opaque at top, transparent toward center
-makeVigFrame(
-        UDim2.new(1, 0, 0.5, 0),
-        UDim2.new(0, 0, 0, 0),
-        Vector2.new(0, 0),
-        90   -- gradient direction: top → bottom
+makeVigFrame(UDim2.new(1, 0, 0.5, 0),  UDim2.new(0, 0, 0, 0), Vector2.new(0, 0),  90)   -- top
+makeVigFrame(UDim2.new(1, 0, 0.5, 0),  UDim2.new(0, 0, 1, 0), Vector2.new(0, 1), -90)   -- bottom
+makeVigFrame(UDim2.new(0.35, 0, 1, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0),   0)   -- left
+makeVigFrame(UDim2.new(0.35, 0, 1, 0), UDim2.new(1, 0, 0, 0), Vector2.new(1, 0), 180)   -- right
+
+-- ─── SM display (20% from top) ─────────────────────────────────────────────────
+-- A container frame so header + body stack naturally
+
+local smContainer = Instance.new("Frame")
+smContainer.Name                  = "SMContainer"
+smContainer.AnchorPoint           = Vector2.new(0.5, 0.5)
+smContainer.Position              = UDim2.new(0.5, 0, 0.20, 0)
+smContainer.Size                  = UDim2.new(0.70, 0, 0, 160)
+smContainer.BackgroundTransparency = 1
+smContainer.BorderSizePixel       = 0
+smContainer.ZIndex                = 10
+smContainer.Visible               = false
+smContainer.Parent                = gui
+
+local smLayout = Instance.new("UIListLayout")
+smLayout.FillDirection    = Enum.FillDirection.Vertical
+smLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+smLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+smLayout.Padding          = UDim.new(0, 8)
+smLayout.SortOrder        = Enum.SortOrder.LayoutOrder
+smLayout.Parent           = smContainer
+
+-- Header: "[ Server Message ]"
+local smHeader = Instance.new("TextLabel")
+smHeader.Name                   = "Header"
+smHeader.LayoutOrder            = 1
+smHeader.Size                   = UDim2.new(1, 0, 0, 26)
+smHeader.BackgroundTransparency = 1
+smHeader.TextColor3             = Color3.fromRGB(200, 200, 200)
+smHeader.TextTransparency       = 1
+smHeader.TextSize               = 16
+smHeader.FontFace               = Font.new(
+        "rbxasset://fonts/families/Merriweather.json",
+        Enum.FontWeight.Regular,
+        Enum.FontStyle.Italic
 )
+smHeader.Text                   = "[ Server Message ]"
+smHeader.TextXAlignment         = Enum.TextXAlignment.Center
+smHeader.ZIndex                 = 10
+smHeader.Parent                 = smContainer
 
--- Bottom edge: opaque at bottom, transparent toward center
-makeVigFrame(
-        UDim2.new(1, 0, 0.5, 0),
-        UDim2.new(0, 0, 1, 0),
-        Vector2.new(0, 1),
-        -90  -- gradient direction: bottom → top
+local smHeaderStroke = Instance.new("UIStroke")
+smHeaderStroke.Color        = Color3.fromRGB(0, 0, 0)
+smHeaderStroke.Thickness    = 1
+smHeaderStroke.Transparency = 1
+smHeaderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+smHeaderStroke.Parent       = smHeader
+
+-- Body: the actual message
+local smBody = Instance.new("TextLabel")
+smBody.Name                   = "Body"
+smBody.LayoutOrder            = 2
+smBody.Size                   = UDim2.new(1, 0, 0, 120)
+smBody.BackgroundTransparency = 1
+smBody.TextColor3             = Color3.fromRGB(255, 255, 255)
+smBody.TextTransparency       = 1
+smBody.TextSize               = 46
+smBody.FontFace               = Font.new(
+        "rbxasset://fonts/families/Merriweather.json",
+        Enum.FontWeight.Bold
 )
+smBody.Text                   = ""
+smBody.TextWrapped            = true
+smBody.TextXAlignment         = Enum.TextXAlignment.Center
+smBody.TextYAlignment         = Enum.TextYAlignment.Center
+smBody.ZIndex                 = 10
+smBody.Parent                 = smContainer
 
--- Left edge: opaque at left, transparent toward center
-makeVigFrame(
-        UDim2.new(0.35, 0, 1, 0),
-        UDim2.new(0, 0, 0, 0),
-        Vector2.new(0, 0),
-        0    -- gradient direction: left → right
+local smBodyStroke = Instance.new("UIStroke")
+smBodyStroke.Color        = Color3.fromRGB(0, 0, 0)
+smBodyStroke.Thickness    = 1.5
+smBodyStroke.Transparency = 1
+smBodyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+smBodyStroke.Parent       = smBody
+
+-- ─── IM display (70% down — 20% below screen centre) ──────────────────────────
+
+local imLabel = Instance.new("TextLabel")
+imLabel.Name                   = "IMText"
+imLabel.AnchorPoint            = Vector2.new(0.5, 0.5)
+imLabel.Position               = UDim2.new(0.5, 0, 0.70, 0)
+imLabel.Size                   = UDim2.new(0.50, 0, 0, 100)
+imLabel.BackgroundTransparency = 1
+imLabel.TextColor3             = Color3.fromRGB(255, 255, 255)
+imLabel.TextTransparency       = 1
+imLabel.TextSize               = 27
+imLabel.FontFace               = Font.new(
+        "rbxasset://fonts/families/Merriweather.json",
+        Enum.FontWeight.Regular
 )
+imLabel.Text                   = ""
+imLabel.TextWrapped            = true
+imLabel.TextXAlignment         = Enum.TextXAlignment.Center
+imLabel.TextYAlignment         = Enum.TextYAlignment.Center
+imLabel.ZIndex                 = 10
+imLabel.Visible                = false
+imLabel.Parent                 = gui
 
--- Right edge: opaque at right, transparent toward center
-makeVigFrame(
-        UDim2.new(0.35, 0, 1, 0),
-        UDim2.new(1, 0, 0, 0),
-        Vector2.new(1, 0),
-        180  -- gradient direction: right → left
-)
+local imStroke = Instance.new("UIStroke")
+imStroke.Color        = Color3.fromRGB(0, 0, 0)
+imStroke.Thickness    = 1
+imStroke.Transparency = 1
+imStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+imStroke.Parent       = imLabel
 
--- ─── Message text label ────────────────────────────────────────────────────────
-
-local msgLabel = Instance.new("TextLabel")
-msgLabel.Name                   = "MessageText"
-msgLabel.AnchorPoint            = Vector2.new(0.5, 0.5)
--- centered horizontally, 20% down from top
-msgLabel.Position               = UDim2.new(0.5, 0, 0.20, 0)
-msgLabel.BackgroundTransparency = 1
-msgLabel.TextColor3             = Color3.fromRGB(255, 255, 255)
-msgLabel.TextTransparency       = 1
-msgLabel.TextWrapped            = true
-msgLabel.TextXAlignment         = Enum.TextXAlignment.Center
-msgLabel.TextYAlignment         = Enum.TextYAlignment.Center
-msgLabel.RichText               = false
-msgLabel.ZIndex                 = 10
-msgLabel.Parent                 = gui
-
--- Subtle drop-shadow/outline for readability without a background box
-local textStroke = Instance.new("UIStroke")
-textStroke.Color        = Color3.fromRGB(0, 0, 0)
-textStroke.Thickness    = 1.5
-textStroke.Transparency = 1          -- starts invisible, tweened alongside text
-textStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-textStroke.Parent       = msgLabel
-
--- ─── Message configs ───────────────────────────────────────────────────────────
-
-local CONFIG = {
-        sm = {
-                textSize       = 46,                                       -- big
-                fontFace       = Font.new(
-                        "rbxasset://fonts/families/Merriweather.json",
-                        Enum.FontWeight.Bold
-                ),
-                labelWidth     = 0.70,                                     -- 70% screen width
-                vigTarget      = 0.0,                                      -- fully visible vignette (darker)
-                blurTarget     = 7,                                        -- stronger blur
-                strokeOpacity  = 0.45,                                     -- subtle outline
-        },
-        im = {
-                textSize       = 27,                                       -- medium/small
-                fontFace       = Font.new(
-                        "rbxasset://fonts/families/Merriweather.json",
-                        Enum.FontWeight.Regular
-                ),
-                labelWidth     = 0.50,                                     -- 50% screen width (less space)
-                vigTarget      = 0.35,                                     -- semi-visible vignette (lighter)
-                blurTarget     = 3,                                        -- subtle blur
-                strokeOpacity  = 0.55,
-        },
-}
-
--- ─── Show / hide logic ─────────────────────────────────────────────────────────
+-- ─── Shared fade logic ─────────────────────────────────────────────────────────
 
 local FADE_IN  = 0.65
 local FADE_OUT = 0.70
 
-local activeToken = {}    -- cancels previous message when a new one arrives
+local activeToken = {}
 
-local function calcHoldTime(text: string): number
-        -- roughly 1 word per 0.4 seconds, minimum 4s, maximum 10s
-        local wordCount = select(2, text:gsub("%S+", "")) + 1
-        return math.clamp(wordCount * 0.4, 4, 10)
+local function calcHold(text: string): number
+        local words = select(2, text:gsub("%S+", "")) + 1
+        return math.clamp(words * 0.4, 4, 10)
 end
 
-local function hideMessage(token)
-        if activeToken ~= token then return end
+-- ─── SM show/hide ──────────────────────────────────────────────────────────────
 
-        tw(vigCanvas,  FADE_OUT, { GroupTransparency  = 1 })
-        tw(blurEffect, FADE_OUT, { Size               = 0 })
-        tw(msgLabel,   FADE_OUT, { TextTransparency   = 1 })
-        tw(textStroke, FADE_OUT, { Transparency       = 1 })
-end
-
-local function showMessage(text: string, kind: string)
-        -- Cancel any current message
+local function showSM(text: string)
         local token = {}
         activeToken = token
 
-        local cfg  = CONFIG[kind] or CONFIG.im
-        local hold = calcHoldTime(text)
+        smBody.Text = text
+        smContainer.Visible = true
+        smContainer.GroupTransparency = 1    -- CanvasGroup not used here; use label transparency
 
-        -- Apply text styling
-        msgLabel.Text     = text
-        msgLabel.TextSize = cfg.textSize
-        msgLabel.FontFace = cfg.fontFace
-        msgLabel.Size     = UDim2.new(cfg.labelWidth, 0, 0, 200)
-
-        -- Snap to invisible before tweening in
+        -- reset
+        smHeader.TextTransparency  = 1
+        smBody.TextTransparency    = 1
+        smHeaderStroke.Transparency = 1
+        smBodyStroke.Transparency  = 1
         vigCanvas.GroupTransparency = 1
+        vigCanvas.Visible           = true
         blurEffect.Size             = 0
-        msgLabel.TextTransparency   = 1
-        textStroke.Transparency     = 1
 
-        -- Fade in
-        tw(vigCanvas,  FADE_IN, { GroupTransparency  = cfg.vigTarget })
-        tw(blurEffect, FADE_IN, { Size               = cfg.blurTarget })
-        tw(msgLabel,   FADE_IN, { TextTransparency   = 0 })
-        tw(textStroke, FADE_IN, { Transparency       = cfg.strokeOpacity })
+        -- fade in
+        tw(vigCanvas,         FADE_IN, { GroupTransparency  = 0 })
+        tw(blurEffect,        FADE_IN, { Size               = 7 })
+        tw(smHeader,          FADE_IN, { TextTransparency   = 0.15 })
+        tw(smBody,            FADE_IN, { TextTransparency   = 0 })
+        tw(smHeaderStroke,    FADE_IN, { Transparency       = 0.55 })
+        tw(smBodyStroke,      FADE_IN, { Transparency       = 0.45 })
 
-        -- Auto-hide after hold period
-        task.delay(FADE_IN + hold, function()
-                hideMessage(token)
+        task.delay(FADE_IN + calcHold(text), function()
+                if activeToken ~= token then return end
+
+                tw(vigCanvas,      FADE_OUT, { GroupTransparency  = 1 })
+                tw(blurEffect,     FADE_OUT, { Size               = 0 })
+                tw(smHeader,       FADE_OUT, { TextTransparency   = 1 })
+                tw(smBody,         FADE_OUT, { TextTransparency   = 1 })
+                tw(smHeaderStroke, FADE_OUT, { Transparency       = 1 })
+                tw(smBodyStroke,   FADE_OUT, { Transparency       = 1 })
+
+                task.delay(FADE_OUT + 0.05, function()
+                        if activeToken ~= token then return end
+                        vigCanvas.Visible   = false
+                        smContainer.Visible = false
+                end)
         end)
+end
+
+-- ─── IM show/hide ──────────────────────────────────────────────────────────────
+
+local function showIM(text: string)
+        local token = {}
+        activeToken = token
+
+        imLabel.Text    = text
+        imLabel.Visible = true
+        imLabel.TextTransparency = 1
+        imStroke.Transparency    = 1
+        vigCanvas.GroupTransparency = 1
+        vigCanvas.Visible           = true
+        blurEffect.Size             = 0
+
+        tw(vigCanvas,  FADE_IN, { GroupTransparency = 0.35 })
+        tw(blurEffect, FADE_IN, { Size              = 3 })
+        tw(imLabel,    FADE_IN, { TextTransparency  = 0 })
+        tw(imStroke,   FADE_IN, { Transparency      = 0.55 })
+
+        task.delay(FADE_IN + calcHold(text), function()
+                if activeToken ~= token then return end
+
+                tw(vigCanvas,  FADE_OUT, { GroupTransparency = 1 })
+                tw(blurEffect, FADE_OUT, { Size              = 0 })
+                tw(imLabel,    FADE_OUT, { TextTransparency  = 1 })
+                tw(imStroke,   FADE_OUT, { Transparency      = 1 })
+
+                task.delay(FADE_OUT + 0.05, function()
+                        if activeToken ~= token then return end
+                        vigCanvas.Visible = false
+                        imLabel.Visible   = false
+                end)
+        end)
+end
+
+-- ─── Cancels the current display when a new message arrives ───────────────────
+local function cancelCurrent()
+        -- Overwrite the token so any pending delay becomes a no-op.
+        -- Also immediately snap everything invisible so the new message
+        -- starts from a clean state.
+        activeToken = {}
+        vigCanvas.GroupTransparency = 1
+        vigCanvas.Visible           = false
+        blurEffect.Size             = 0
+        smContainer.Visible         = false
+        smHeader.TextTransparency   = 1
+        smBody.TextTransparency     = 1
+        smHeaderStroke.Transparency = 1
+        smBodyStroke.Transparency   = 1
+        imLabel.Visible             = false
+        imLabel.TextTransparency    = 1
+        imStroke.Transparency       = 1
 end
 
 -- ─── Remote listeners ──────────────────────────────────────────────────────────
 
 CommandRemotes.SM.OnClientEvent:Connect(function(message: string)
         if typeof(message) ~= "string" or message == "" then return end
-        showMessage(message, "sm")
+        cancelCurrent()
+        showSM(message)
 end)
 
 CommandRemotes.IM.OnClientEvent:Connect(function(message: string)
         if typeof(message) ~= "string" or message == "" then return end
-        showMessage(message, "im")
+        cancelCurrent()
+        showIM(message)
 end)
 
 print("[CommandEffects] SM/IM display ready.")
