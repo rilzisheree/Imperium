@@ -408,6 +408,20 @@ local function buildPsRow(index: number): Frame
         return row
 end
 
+local function highlightPsRow(targetIndex: number)
+        playerSuggestIndex = targetIndex
+        local count = math.min(#filteredPlayers, CFG.PS_MAX_ENTRIES)
+        for i = 1, count do
+                local row = psRows[i]
+                if row and row.Visible then
+                        local nl  = row:FindFirstChild("PlayerName")
+                        local sel = (i == targetIndex)
+                        tw(row, 0.07, { BackgroundTransparency = sel and 0.55 or 1 })
+                        if nl then tw(nl, 0.07, { TextColor3 = sel and CFG.PROMPT_COLOR or CFG.PS_TEXT_COLOR }) end
+                end
+        end
+end
+
 local function refreshPlayerSuggestions(filter: string)
         -- Collect and filter players from the server
         local all = Players:GetPlayers()
@@ -952,22 +966,34 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
         if not inputFocused then return end
 
-        -- History navigation
+        -- Up/Down: navigate player suggestions when the panel is open, else scroll history
         if input.KeyCode == Enum.KeyCode.Up then
-                if historyIndex == 0 then savedDraft = inputBox.Text end
-                historyIndex = math.min(historyIndex + 1, #history)
-                if history[historyIndex] then
-                        inputBox.Text = history[historyIndex]
-                        task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
+                if playerSuggestPanel.Visible and #filteredPlayers > 0 then
+                        local count = math.min(#filteredPlayers, CFG.PS_MAX_ENTRIES)
+                        local next  = ((playerSuggestIndex - 2) % count) + 1
+                        highlightPsRow(next)
+                else
+                        if historyIndex == 0 then savedDraft = inputBox.Text end
+                        historyIndex = math.min(historyIndex + 1, #history)
+                        if history[historyIndex] then
+                                inputBox.Text = history[historyIndex]
+                                task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
+                        end
                 end
                 return
         end
 
         if input.KeyCode == Enum.KeyCode.Down then
-                if historyIndex > 0 then
-                        historyIndex -= 1
-                        inputBox.Text = historyIndex == 0 and savedDraft or history[historyIndex]
-                        task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
+                if playerSuggestPanel.Visible and #filteredPlayers > 0 then
+                        local count = math.min(#filteredPlayers, CFG.PS_MAX_ENTRIES)
+                        local next  = (playerSuggestIndex % count) + 1
+                        highlightPsRow(next)
+                else
+                        if historyIndex > 0 then
+                                historyIndex -= 1
+                                inputBox.Text = historyIndex == 0 and savedDraft or history[historyIndex]
+                                task.defer(function() inputBox.CursorPosition = #inputBox.Text + 1 end)
+                        end
                 end
                 return
         end
