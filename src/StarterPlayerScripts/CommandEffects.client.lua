@@ -98,7 +98,7 @@ end
 local smHeader = Instance.new("TextLabel")
 smHeader.Name                   = "SMHeader"
 smHeader.AnchorPoint            = Vector2.new(0.5, 1)
-smHeader.Position               = UDim2.new(0.5, 0, 0.20, -4)
+smHeader.Position               = UDim2.new(0.5, 0, 0.16, -4)
 smHeader.Size                   = UDim2.new(0.75, 0, 0, 38)
 smHeader.BackgroundTransparency = 1
 smHeader.TextColor3             = Color3.fromRGB(255, 255, 255)
@@ -115,7 +115,7 @@ smHeader.Parent                 = gui
 local smBody = Instance.new("TextLabel")
 smBody.Name                   = "SMBody"
 smBody.AnchorPoint            = Vector2.new(0.5, 0)
-smBody.Position               = UDim2.new(0.5, 0, 0.20, 4)
+smBody.Position               = UDim2.new(0.5, 0, 0.16, 4)
 smBody.Size                   = UDim2.new(0.70, 0, 0, 110)
 smBody.BackgroundTransparency = 1
 smBody.TextColor3             = Color3.fromRGB(255, 255, 255)
