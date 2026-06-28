@@ -29,64 +29,36 @@ local CommandRegistry = {}
 --]]
 CommandRegistry.COMMANDS = {
 
-        -- ── Moderation ──────────────────────────────────────────────────────────────
-        kick = {
-                description = "Kick a player from the server",
-                args        = { "player", "reason?" },
-                permission  = "Moderator",
-                aliases     = {},
-        },
-
-        ban = {
-                description = "Permanently ban a player",
-                args        = { "player", "reason?" },
-                permission  = "Admin",
-                aliases     = {},
-        },
-
-        unban = {
-                description = "Unban a previously banned player",
-                args        = { "username" },
-                permission  = "Admin",
-                aliases     = {},
-        },
-
-        mute = {
-                description = "Mute a player's chat",
-                args        = { "player", "duration?" },
-                permission  = "Moderator",
-                aliases     = {},
-        },
-
-        unmute = {
-                description = "Remove a player's chat mute",
+        -- ── Blind ────────────────────────────────────────────────────────────────
+        blind = {
+                description = "Blind a player with a black screen overlay",
                 args        = { "player" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
-        warn = {
-                description = "Issue a warning to a player",
-                args        = { "player", "reason" },
-                permission  = "Helper",
-                aliases     = {},
-        },
-
-        -- ── Teleportation ───────────────────────────────────────────────────────────
-        tp = {
-                description = "Teleport a player to another player",
-                args        = { "from", "to" },
-                permission  = "Moderator",
-                aliases     = { "teleport" },
-        },
-
-        tpme = {
-                description = "Teleport yourself to a player",
+        unblind = {
+                description = "Remove the blind effect from a player",
                 args        = { "player" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
+        blindAll = {
+                description = "Blind every player in the server",
+                args        = {},
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        unblindAll = {
+                description = "Unblind every player in the server",
+                args        = {},
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        -- ── Player Management ─────────────────────────────────────────────────────
         bring = {
                 description = "Bring a player to your location",
                 args        = { "player" },
@@ -94,17 +66,16 @@ CommandRegistry.COMMANDS = {
                 aliases     = {},
         },
 
-        -- ── Utility ─────────────────────────────────────────────────────────────────
-        announce = {
-                description = "Send a server-wide announcement",
-                args        = { "message" },
-                permission  = "Admin",
-                aliases     = { "ann" },
+        kick = {
+                description = "Kick a player from the server",
+                args        = { "player", "reason?" },
+                permission  = "Moderator",
+                aliases     = {},
         },
 
-        speed = {
-                description = "Set a player's walk speed",
-                args        = { "player", "value" },
+        damage = {
+                description = "Deal damage to a player",
+                args        = { "player", "amount" },
                 permission  = "Moderator",
                 aliases     = {},
         },
@@ -117,64 +88,248 @@ CommandRegistry.COMMANDS = {
         },
 
         respawn = {
-                description = "Force respawn a player",
+                description = "Respawn a player at world spawn",
                 args        = { "player" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
-        spectate = {
-                description = "Spectate a player's camera",
+        re = {
+                description = "Refresh a player and return them to their position",
                 args        = { "player" },
-                permission  = "Helper",
+                permission  = "Moderator",
                 aliases     = {},
         },
 
-        god = {
-                description = "Toggle invincibility for a player",
+        ragdoll = {
+                description = "Ragdoll a player in place",
+                args        = { "player" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        createcorpse = {
+                description = "Create a frozen corpse at a player's position",
                 args        = { "player" },
                 permission  = "Admin",
                 aliases     = {},
         },
 
-        freeze = {
-                description = "Freeze a player in place",
+        -- ── Hats & Accessories ────────────────────────────────────────────────────
+        clearhats = {
+                description = "Remove all accessories/hats from a player",
                 args        = { "player" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
-        unfreeze = {
-                description = "Unfreeze a player",
+        hat = {
+                description = "Give a player a hat by catalog asset ID",
+                args        = { "player", "assetId" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        removehat = {
+                description = "Remove a specific hat from a player by name",
+                args        = { "player", "hatName" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        -- ── Items ─────────────────────────────────────────────────────────────────
+        giveitem = {
+                description = "Permanently give a player a tool from ServerStorage",
+                args        = { "player", "itemName" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        tempitem = {
+                description = "Temporarily give a player a tool (removed after duration)",
+                args        = { "player", "itemName", "duration?" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        removeitem = {
+                description = "Remove all tools from a player's backpack",
+                args        = { "player" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        -- ── Teleportation ─────────────────────────────────────────────────────────
+        tp = {
+                description = "Teleport player 1 to player 2",
+                args        = { "from", "to" },
+                permission  = "Moderator",
+                aliases     = { "teleport" },
+        },
+
+        to = {
+                description = "Teleport yourself to a player",
                 args        = { "player" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
-        -- ── Server ──────────────────────────────────────────────────────────────────
+        place = {
+                description = "Teleport a player to a different place ID",
+                args        = { "player", "placeId" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        serverbring = {
+                description = "Pull a player from another server into yours",
+                args        = { "player" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        serverjoin = {
+                description = "Join the server that a player is currently in",
+                args        = { "player" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        privateserver = {
+                description = "Reserve a private server instance and teleport there",
+                args        = {},
+                permission  = "Owner",
+                aliases     = {},
+        },
+
+        -- ── Waypoints ─────────────────────────────────────────────────────────────
+        setwaypoint = {
+                description = "Place a world waypoint visible to all players",
+                args        = { "label?" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        clearwaypoints = {
+                description = "Clear all active waypoints for everyone",
+                args        = {},
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        -- ── Server & World ────────────────────────────────────────────────────────
+        setworldspawn = {
+                description = "Set the world spawn to your current position",
+                args        = {},
+                permission  = "Admin",
+                aliases     = {},
+        },
+
         shutdown = {
-                description = "Gracefully shut down the server",
+                description = "Shut down the server after an optional delay",
                 args        = { "delay?" },
                 permission  = "Owner",
                 aliases     = {},
         },
 
-        logs = {
-                description = "Pull recent moderation logs",
-                args        = { "lines?" },
+        -- ── Visibility ────────────────────────────────────────────────────────────
+        invis = {
+                description = "Make yourself invisible",
+                args        = {},
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        uninvis = {
+                description = "Make yourself visible again",
+                args        = {},
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        -- ── Narration & Messaging ─────────────────────────────────────────────────
+        sm = {
+                description = "Server message for narration — bottom screen, all players",
+                args        = { "message" },
                 permission  = "Moderator",
                 aliases     = {},
         },
 
-        players = {
-                description = "List all players currently in the server",
-                args        = {},
-                permission  = "Helper",
-                aliases     = { "list" },
+        im = {
+                description = "Individual message — bottom screen, one player",
+                args        = { "player", "message" },
+                permission  = "Moderator",
+                aliases     = {},
         },
 
-        whoami = {
-                description = "Show your UserId and permission tier (debug)",
+        pm = {
+                description = "Private message — fades in/out on the target's middle screen",
+                args        = { "player", "message" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        notif = {
+                description = "Notification PM — shows your name at the bottom of their screen",
+                args        = { "player", "message" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        -- ── Countdown ─────────────────────────────────────────────────────────────
+        countdown = {
+                description = "Show a countdown on the left side of the screen for everyone",
+                args        = { "seconds" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        -- ── Music ─────────────────────────────────────────────────────────────────
+        music = {
+                description = "Play a music asset ID server-wide (0 to stop)",
+                args        = { "assetId" },
+                permission  = "Moderator",
+                aliases     = {},
+        },
+
+        -- ── Staff Tools ───────────────────────────────────────────────────────────
+        esp = {
+                description = "Toggle ESP overlay — names, username, health, distance",
+                args        = {},
+                permission  = "Helper",
+                aliases     = {},
+        },
+
+        fly = {
+                description = "Toggle flight for a player (E to fly, Alt to speed up)",
+                args        = { "player" },
+                permission  = "Admin",
+                aliases     = {},
+        },
+
+        watch = {
+                description = "Watch another player's point of view",
+                args        = { "player" },
+                permission  = "Helper",
+                aliases     = {},
+        },
+
+        chatlogs = {
+                description = "Open the recent chat log panel",
+                args        = {},
+                permission  = "Helper",
+                aliases     = {},
+        },
+
+        help = {
+                description = "Send a help request to all staff with helpUI enabled",
+                args        = { "message" },
+                permission  = "Helper",
+                aliases     = {},
+        },
+
+        helpUI = {
+                description = "Toggle the help request UI panel (required to receive help calls)",
                 args        = {},
                 permission  = "Helper",
                 aliases     = {},
@@ -191,10 +346,10 @@ function CommandRegistry.getMatches(query: string): { { name: string, entry: tab
         local results = {}
 
         for name, entry in CommandRegistry.COMMANDS do
-                local matched = name:sub(1, #query) == query
+                local matched = name:lower():sub(1, #query) == query
                 if not matched then
                         for _, alias in entry.aliases or {} do
-                                if alias:sub(1, #query) == query then
+                                if alias:lower():sub(1, #query) == query then
                                         matched = true
                                         break
                                 end
@@ -213,10 +368,6 @@ end
         CommandRegistry.parseArgs(input)
         Splits an argument string on whitespace, respecting "quoted strings".
         Returns an ordered table of strings.
-
-        Example:
-          parseArgs('kick "John Doe" "bad behaviour"')
-          → { "kick", "John Doe", "bad behaviour" }
 --]]
 function CommandRegistry.parseArgs(input: string): { string }
         local args = {}
@@ -224,23 +375,20 @@ function CommandRegistry.parseArgs(input: string): { string }
         local len  = #input
 
         while i <= len do
-                -- skip whitespace
                 while i <= len and input:sub(i, i):match("%s") do
                         i += 1
                 end
                 if i > len then break end
 
                 if input:sub(i, i) == '"' then
-                        -- Quoted token — collect until closing quote
                         i += 1
                         local start = i
                         while i <= len and input:sub(i, i) ~= '"' do
                                 i += 1
                         end
                         table.insert(args, input:sub(start, i - 1))
-                        i += 1  -- skip closing "
+                        i += 1
                 else
-                        -- Unquoted token — collect until whitespace
                         local start = i
                         while i <= len and not input:sub(i, i):match("%s") do
                                 i += 1

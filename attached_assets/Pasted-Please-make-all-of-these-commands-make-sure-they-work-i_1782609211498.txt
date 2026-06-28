@@ -1,0 +1,46 @@
+Please make all of these commands, make sure they work in the command bar when you press ; also ask me anything you don't know or for extra information for specific commands. For the sm and im commands, look at the photo below to see how the text/font should be like.
+
+Read up the whole structure from the repo and to see everything so you know what you're dealing with.
+
+blind - Blinds players
+createcorpse - Creates a corpse 
+unblind - Unblinds players
+blindAll - Blinds everyone
+bring - Brings a player to you
+chatlogs - Opens chatlogs 
+clearhats - Clears a players hats (accessories) 
+clearwaypoints - Clears any current waypoints
+countdown - Provides a countdown on the left side of the screen
+damage - Damages a player
+esp - Shows player name, username, health, and other stats
+fly - E to fly, alt to speed up, flies the player put in the parameter
+giveitem - Permanently gives a player an item
+hat - Gives a player a hat
+heal - Heals a player
+help - Sends a help message to Staff who has helpUI on
+helpUI - Use if help commands aren't showing, test with help 
+invis - Makes your character invisible 
+uninvis - Make your character visible 
+kick - Kicks a player from the server
+music - Plays a music id
+notif - A modified pm that shows who sent it at the bottom of your screen
+place - Places players to a place id
+pm - A private message that appears on the other player's middle screen, fades in and out
+privateserver - Creates a separate instance that requires you to drag players to it
+ragdoll - Ragdoll
+re - Refreshes a player and places them back to where they were
+removehat - Removes a players hat
+removeitem - Permanently removes a players items
+respawn - Respawns a player to world spawn
+serverbring - Brings a player to your server
+serverjoin - Join another players server
+setwaypoint - Sets a waypoint down for players to see
+setworldspawn - Sets the world spawn elsewhere
+shutdown - Shuts the server down 
+sm - A server message utilized as a primary function for narration in game, shows on the bottom of the screen, fades in and out 
+im - A specific message for one individual, shows at the bottom of the screen and fades in and out
+tempitem - Temporarily gives a player an item 
+to - Teleports you to a player
+tp - Teleports player 1 to player 2 
+unblindAll - Unblinds everyone
+watch - Watches a different players pov 
