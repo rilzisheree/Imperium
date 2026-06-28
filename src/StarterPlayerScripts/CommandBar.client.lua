@@ -921,9 +921,16 @@ inputBox.FocusLost:Connect(function(enterPressed)
 end)
 
 inputBox:GetPropertyChangedSignal("Text"):Connect(function()
-        if isOpen then
-                updateAutocomplete()
+        if not isOpen then return end
+        -- Roblox inserts a literal \t when Tab is pressed inside a TextBox.
+        -- Strip it immediately so it never appears in the input.
+        if inputBox.Text:find("\t") then
+                local cleaned = inputBox.Text:gsub("\t", "")
+                inputBox.Text = cleaned
+                inputBox.CursorPosition = #cleaned + 1
+                return  -- the assignment above will re-fire this signal cleanly
         end
+        updateAutocomplete()
 end)
 
 blocker.MouseButton1Click:Connect(function()
