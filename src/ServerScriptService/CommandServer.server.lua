@@ -15,13 +15,16 @@
         Tier hierarchy: Helper < Moderator < Admin < Owner.
 --]]
 
-local Players           = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService   = game:GetService("TeleportService")
-local InsertService     = game:GetService("InsertService")
-local ServerStorage     = game:GetService("ServerStorage")
+local Players            = game:GetService("Players")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local TeleportService    = game:GetService("TeleportService")
+local InsertService      = game:GetService("InsertService")
+local ServerStorage      = game:GetService("ServerStorage")
+local RunService         = game:GetService("RunService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
-local MessagingService  = game:GetService("MessagingService")
+local MessagingService   = game:GetService("MessagingService")
+
+local IS_STUDIO = RunService:IsStudio()
 
 local CommandRemotes  = require(ReplicatedStorage:WaitForChild("CommandRemotes")  :: ModuleScript)
 local CommandRegistry = require(ReplicatedStorage:WaitForChild("CommandRegistry") :: ModuleScript)
@@ -39,6 +42,14 @@ local STAFF_CONFIG = {
 local TIER_ORDER = { Helper = 1, Moderator = 2, Admin = 3, Owner = 4 }
 
 local function getTier(player: Player): string?
+        -- In Studio, grant Owner to everyone for testing
+        if IS_STUDIO then return "Owner" end
+
+        -- Game creator always gets Owner
+        if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
+                return "Owner"
+        end
+
         local directTier = STAFF_CONFIG.STAFF_IDS[player.UserId]
         if directTier then return directTier end
         if STAFF_CONFIG.GROUP_ID > 0 then
@@ -170,8 +181,8 @@ HANDLERS["unblind"] = function(executor, args)
         ok(executor, target.DisplayName .. " has been unblinded.")
 end
 
--- ── blindAll ──────────────────────────────────────────────────────────────────
-HANDLERS["blindAll"] = function(executor, _args)
+-- ── blindall ──────────────────────────────────────────────────────────────────
+HANDLERS["blindall"] = function(executor, _args)
         for _, player in Players:GetPlayers() do
                 blindedPlayers[player.UserId] = true
                 CommandRemotes.Blind:FireClient(player, true)
@@ -179,8 +190,8 @@ HANDLERS["blindAll"] = function(executor, _args)
         ok(executor, "All players blinded.")
 end
 
--- ── unblindAll ────────────────────────────────────────────────────────────────
-HANDLERS["unblindAll"] = function(executor, _args)
+-- ── unblindall ────────────────────────────────────────────────────────────────
+HANDLERS["unblindall"] = function(executor, _args)
         for _, player in Players:GetPlayers() do
                 blindedPlayers[player.UserId] = nil
                 CommandRemotes.Blind:FireClient(player, false)
@@ -904,8 +915,8 @@ HANDLERS["help"] = function(executor, args)
         ok(executor, "Help request sent to " .. staffCount .. " staff member(s) with helpUI enabled.")
 end
 
--- ── helpUI ────────────────────────────────────────────────────────────────────
-HANDLERS["helpUI"] = function(executor, _args)
+-- ── helpui ────────────────────────────────────────────────────────────────────
+HANDLERS["helpui"] = function(executor, _args)
         local current = helpUIPlayers[executor.UserId] or false
         local newState = not current
         helpUIPlayers[executor.UserId] = newState

@@ -1030,4 +1030,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
 end)
 
+-- ─── Server feedback toasts ────────────────────────────────────────────────────
+-- Show success/failure messages returned by the server as right-side notifications.
+
+CommandRemotes.CommandFeedback.OnClientEvent:Connect(function(success: boolean, msg: string)
+        if typeof(msg) ~= "string" then return end
+        local prefix = success and "✓  " or "✗  "
+        showNotification(prefix .. msg)
+end)
+
 print("[CommandBar] Staff command bar active. Press ; to open.")

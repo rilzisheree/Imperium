@@ -44,14 +44,14 @@ CommandRegistry.COMMANDS = {
                 aliases     = {},
         },
 
-        blindAll = {
+        blindall = {
                 description = "Blind every player in the server",
                 args        = {},
                 permission  = "Admin",
                 aliases     = {},
         },
 
-        unblindAll = {
+        unblindall = {
                 description = "Unblind every player in the server",
                 args        = {},
                 permission  = "Admin",
@@ -328,7 +328,7 @@ CommandRegistry.COMMANDS = {
                 aliases     = {},
         },
 
-        helpUI = {
+        helpui = {
                 description = "Toggle the help request UI panel (required to receive help calls)",
                 args        = {},
                 permission  = "Helper",
