@@ -70,9 +70,9 @@ local function makeVigFrame(size, position, anchor, gradRot)
 
         local g = Instance.new("UIGradient")
         g.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0,    0),    -- opaque at edge
-                NumberSequenceKeypoint.new(0.55, 0.65),
-                NumberSequenceKeypoint.new(1,    1),    -- transparent toward centre
+                NumberSequenceKeypoint.new(0,    0.55),  -- very faint at edge
+                NumberSequenceKeypoint.new(0.4,  0.85),
+                NumberSequenceKeypoint.new(1,    1),     -- transparent toward centre
         })
         g.Rotation = gradRot
         g.Parent   = f
@@ -190,8 +190,8 @@ local function showSM(text: string)
         smBody.Visible            = true
         smBody.TextTransparency   = 1
 
-        -- vignette SM: full dark (target 0)
-        tweenVig(0, FADE_IN)
+        -- vignette SM: barely-there edge (target 0.82)
+        tweenVig(0.82, FADE_IN)
         tw(smHeader, FADE_IN, { TextTransparency = 0.10 })
         tw(smBody,   FADE_IN, { TextTransparency = 0    })
 
@@ -219,8 +219,8 @@ local function showIM(text: string)
         imLabel.Visible          = true
         imLabel.TextTransparency = 1
 
-        -- vignette IM: lighter (target 0.45)
-        tweenVig(0.45, FADE_IN)
+        -- vignette IM: barely-there edge (target 0.90)
+        tweenVig(0.90, FADE_IN)
         tw(imLabel, FADE_IN, { TextTransparency = 0 })
 
         task.delay(FADE_IN + calcHold(text), function()
